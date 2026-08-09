@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VAR FUTSAL PRO - 1-2 Min Replay & Auto Delete</title>
+    <title>VAR FUTSAL PRO - Auto-Delete & Zero Delay</title>
     
-    <!-- SDK Firebase -->
+    <!-- SDK Firebase (V8) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     
@@ -24,7 +24,8 @@
         
         .btn-blue { background: #0284c7; color: white; width: 100%; } .btn-blue:hover { background: #0369a1; }
         .btn-green { background: #16a34a; color: white; width: 31%; } .btn-green:hover { background: #15803d; }
-        .btn-red { background: #e11d48; color: white; width: 31%; } .btn-red:hover { background: #be123c; }
+        .btn-red { background: #e11d48; color: white; width: 100%; } .btn-red:hover { background: #be123c; }
+        .btn-red-half { background: #e11d48; color: white; width: 31%; } .btn-red-half:hover { background: #be123c; }
         .btn-orange { background: #d97706; color: white; width: 31%; } .btn-orange:hover { background: #b45309; }
         .btn-yellow { background: #eab308; color: black; width: 48%; } .btn-yellow:hover { background: #ca8a04; color: white; }
         .btn-gray { background: #475569; color: white; width: 48%; } .btn-gray:hover { background: #334155; }
@@ -33,22 +34,22 @@
         
         /* Box Video Utama */
         .video-box { position: relative; width: 100%; background: #000; border-radius: 8px; overflow: hidden; min-height: 250px; display: flex; align-items: center; justify-content: center; border: 3px solid #334155;}
-        video, img { width: 100%; height: auto; display: block; }
+        video, img { width: 100%; height: auto; display: block; object-fit: cover; }
         canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
         
         /* Grid 3 Kamera */
         .cams-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
-        .cam-thumb { background: #000; border: 2px solid #475569; border-radius: 6px; cursor: pointer; overflow: hidden; position: relative;}
+        .cam-thumb { background: #000; border: 2px solid #475569; border-radius: 6px; cursor: pointer; overflow: hidden; position: relative; min-height: 80px;}
         .cam-thumb.active { border-color: #38bdf8; box-shadow: 0 0 10px rgba(56, 189, 248, 0.5); }
-        .cam-label { position: absolute; top: 2px; left: 2px; background: rgba(0,0,0,0.7); font-size: 0.7rem; padding: 2px 6px; border-radius: 4px;}
+        .cam-label { position: absolute; top: 2px; left: 2px; background: rgba(0,0,0,0.7); font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; z-index: 5;}
 
         /* Bank Replay Tersimpan */
         .replay-list { background: #0f172a; padding: 10px; border-radius: 8px; text-align: left; margin-top: 15px; border: 1px solid #334155;}
-        .replay-item { background: #1e293b; padding: 8px; margin-bottom: 5px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #38bdf8;}
+        .replay-item { background: #1e293b; padding: 8px; margin-bottom: 5px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #e11d48;}
         .replay-item button { padding: 6px 10px; font-size: 0.8rem; margin: 0 2px;}
 
         /* VAR Monitor Wasit Overlay */
-        .var-overlay { position: absolute; bottom: 10%; left: 0; width: 100%; text-align: center; pointer-events: none; }
+        .var-overlay { position: absolute; bottom: 10%; left: 0; width: 100%; text-align: center; pointer-events: none; z-index: 10;}
         .var-text { background: rgba(0, 0, 0, 0.85); color: #fff; padding: 10px 20px; font-size: 1.3rem; font-weight: 900; text-transform: uppercase; border: 2px solid #fff; display: inline-block; box-shadow: 0 0 15px rgba(255,255,255,0.5);}
         
         .status-badge { font-size: 0.8rem; padding: 4px 8px; border-radius: 4px; background: #334155; display: inline-block; margin-top: 8px; }
@@ -56,7 +57,7 @@
 </head>
 <body>
 
-    <h1>⚽ VAR FUTSAL PRO (1-2 MIN REPLAY)</h1>
+    <h1>⚽ VAR FUTSAL PRO (AUTO-DELETE)</h1>
 
     <!-- MENU UTAMA -->
     <div id="menu" class="card">
@@ -76,9 +77,10 @@
         </select>
         <div class="video-box"><video id="webcam" autoplay playsinline muted></video></div>
         <br>
-        <button class="btn-blue" onclick="mulaiKamera()">🟢 Mulai Live Stream</button>
+        <button class="btn-green" style="width:100%; margin-bottom: 5px;" onclick="mulaiKamera()">🟢 Mulai Live Stream</button>
+        <button class="btn-red" style="margin-bottom: 5px;" onclick="hentikanKamera()">⏹️ Matikan Stream</button>
         <button class="btn-gray" style="width:100%;" onclick="tukarKamera()">🔄 Ganti Kamera</button>
-        <div id="status-cam" class="status-badge">Status: Siap</div>
+        <div id="status-cam" class="status-badge">Status: Menunggu...</div>
     </div>
 
     <!-- PANEL KONTROL WASIT -->
@@ -88,7 +90,7 @@
         <!-- Layar Utama -->
         <div class="video-box" id="box-operator">
             <div class="cam-label" style="background:#e11d48; top:10px; right:10px; font-size:0.9rem;">Layar Utama (AI Aktif)</div>
-            <img id="stream-main" src="" alt="Pilih kamera di bawah...">
+            <img id="stream-main" src="" alt="Menunggu koneksi kamera...">
             <canvas id="canvas-ai"></canvas>
         </div>
 
@@ -107,12 +109,12 @@
         
         <div style="margin-top: 10px;">
             <div id="status-ai" class="status-badge">AI: Menyiapkan...</div>
-            <div id="status-timer" class="status-badge" style="background:#0284c7;">Auto-Clean: 90s</div>
+            <div class="status-badge" style="background:#16a34a;">Auto-Clean RAM & Klip Aktif 🗑️</div>
         </div>
 
-        <!-- REPLAY 1-2 MENIT TERSIMPAN -->
+        <!-- REPLAY 90 DETIK DENGAN PENGHAPUSAN OTOMATIS -->
         <div class="replay-list">
-            <h4 style="margin:0 0 10px 0; color:#94a3b8;">📼 Video Kejadian (1-2 Menit Terakhir)</h4>
+            <h4 style="margin:0 0 10px 0; color:#94a3b8;">📼 Bank Replay (Otomatis Hapus Setelah 2 Menit)</h4>
             <div id="replay-container">
                 <div style="color: #64748b; font-size: 0.8rem;">Menunggu AI mendeteksi kejadian...</div>
             </div>
@@ -123,7 +125,7 @@
             <h4 style="margin:0 0 10px 0; color:#94a3b8;">Kirim Keputusan Akhir ke Wasit</h4>
             <div style="display: flex; flex-wrap: wrap; justify-content: space-between;">
                 <button class="btn-green" onclick="kirimKeputusanManual('⚽ DECISION: GOAL')">⚽ GOAL</button>
-                <button class="btn-red" onclick="kirimKeputusanManual('❌ DECISION: NO GOAL')">❌ NO GOAL</button>
+                <button class="btn-red-half" onclick="kirimKeputusanManual('❌ DECISION: NO GOAL')">❌ NO GOAL</button>
                 <button class="btn-orange" onclick="kirimKeputusanManual('🛑 DECISION: FOUL')">🛑 FOUL</button>
                 <button class="btn-yellow" onclick="kirimKeputusanManual('✋ DECISION: HANDBALL')">✋ HANDBALL</button>
                 <button class="btn-gray" onclick="kirimKeputusanManual('✅ DECISION: PLAY ON')">✅ PLAY ON</button>
@@ -135,10 +137,7 @@
     <div id="panel-wasit" class="card hidden" style="max-width: 800px;">
         <h3>📺 MONITOR WASIT (VAR)</h3>
         <div class="video-box" style="min-height: 400px;">
-            <!-- Gunakan elemen VIDEO agar mendukung replay durasi panjang (1-2 menit) -->
-            <video id="video-wasit" autoplay loop controls style="display:none; width:100%; height:auto;"></video>
             <img id="img-wasit-placeholder" src="" alt="Menunggu Kejadian...">
-            
             <div class="var-overlay" id="var-overlay" style="display: none;">
                 <div class="var-text" id="var-decision-text">VAR REVIEW</div>
             </div>
@@ -162,14 +161,16 @@
 
     // --- VARIABEL GLOBAL ---
     let currentStream = null, isFacingUser = false, isUploading = false;
-    let modelAI = null, isAIActive = false, isDetecting = false;
+    let cameraInterval = null;
+    let modelAI = null, isAIActive = false;
     let activeCam = 1; 
 
-    // Buffer Replay Video (1.5 Menit = 90 Detik)
-    const REPLAY_DURATION_MS = 90000; // 90 Detik (1.5 Menit)
-    const videoChunks = [];
-    let savedVideoReplays = []; // Bank Video Replay
+    // Buffer Memori: 900 Frame = ~90 Detik (1.5 Menit)
+    const MAX_FRAMES = 900; 
+    const camBuffers = { 1: [], 2: [], 3: [] }; 
+    let savedVideoReplays = []; 
     let lastAITrigger = 0;
+    let lastAIDetectTime = 0;
 
     // --- NAVIGASI ---
     function pilihPeran(peran) {
@@ -183,54 +184,79 @@
     async function mulaiKamera() {
         const video = document.getElementById('webcam');
         const camId = document.getElementById('cam-id').value;
+        const statusCam = document.getElementById('status-cam');
         
-        if (currentStream) currentStream.getTracks().forEach(track => track.stop());
+        hentikanKameraLokal();
+        
         const mode = isFacingUser ? "user" : "environment";
-        
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ 
                 video: { facingMode: mode, width: { ideal: 320 }, height: { ideal: 240 } }
             });
             currentStream = stream;
             video.srcObject = stream;
-            document.getElementById('status-cam').innerText = `Status: Live Stream (Cam ${camId}) 🔴`;
+            statusCam.innerText = `Status: Live Stream (Cam ${camId}) 🔴`;
 
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
             canvas.width = 320; canvas.height = 240;
 
-            setInterval(async () => {
+            cameraInterval = setInterval(async () => {
                 if (video.readyState === video.HAVE_ENOUGH_DATA && !isUploading) {
                     isUploading = true; 
                     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    const frameData = canvas.toDataURL('image/jpeg', 0.3);
-                    try { await db.ref(`var/cam_${camId}`).set(frameData); } 
-                    catch (e) {} finally { isUploading = false; }
+                    const frameData = canvas.toDataURL('image/jpeg', 0.2); 
+                    
+                    try { 
+                        await db.ref(`var/cam_${camId}`).set(frameData); 
+                    } catch (e) {
+                    } finally { 
+                        isUploading = false; 
+                    }
                 }
             }, 100); 
         } catch (err) { alert("Gagal Akses Kamera!"); }
     }
-    function tukarKamera() { isFacingUser = !isFacingUser; mulaiKamera(); }
 
-    // --- 2. OPERATOR (KONTROL MULTI-STREAM) ---
+    function hentikanKameraLokal() {
+        if (cameraInterval) clearInterval(cameraInterval);
+        if (currentStream) {
+            currentStream.getTracks().forEach(track => track.stop());
+            currentStream = null;
+        }
+        document.getElementById('webcam').srcObject = null;
+        isUploading = false;
+    }
+
+    function hentikanKamera() {
+        hentikanKameraLokal();
+        document.getElementById('status-cam').innerText = "Status: Stream Dimatikan ⏹️";
+        const camId = document.getElementById('cam-id').value;
+        db.ref(`var/cam_${camId}`).set(""); 
+    }
+
+    function tukarKamera() { 
+        isFacingUser = !isFacingUser; 
+        if(currentStream) mulaiKamera(); 
+    }
+
+    // --- 2. OPERATOR (MULTI-STREAM & 90s BUFFER) ---
     function bacaMultiStream() {
         [1, 2, 3].forEach(id => {
             db.ref(`var/cam_${id}`).on('value', (snapshot) => {
                 const data = snapshot.val();
                 if (data) {
                     document.getElementById(`stream-cam${id}`).src = data;
-                    if (activeCam === id) {
-                        document.getElementById('stream-main').src = data;
-                        
-                        // Simpan frame berstempel waktu untuk pemotongan klip 1-2 menit
-                        videoChunks.push({ timestamp: Date.now(), data: data });
-                        
-                        // MANAJEMEN MEMORI: Hapus otomatis data yang lebih tua dari 1.5 Menit (90 Detik)
-                        const cutoff = Date.now() - REPLAY_DURATION_MS;
-                        while (videoChunks.length > 0 && videoChunks[0].timestamp < cutoff) {
-                            videoChunks.shift(); // Hapus permanen dari memori
-                        }
+                    if (activeCam === id) document.getElementById('stream-main').src = data;
+                    
+                    camBuffers[id].push(data);
+                    // Hapus data live yang lebih dari 90 detik secara otomatis dari memori RAM
+                    if (camBuffers[id].length > MAX_FRAMES) {
+                        camBuffers[id].shift(); 
                     }
+                } else {
+                    document.getElementById(`stream-cam${id}`).removeAttribute('src');
+                    if (activeCam === id) document.getElementById('stream-main').removeAttribute('src');
                 }
             });
         });
@@ -240,35 +266,35 @@
         activeCam = id;
         document.querySelectorAll('.cam-thumb').forEach(el => el.classList.remove('active'));
         document.getElementById(`thumb-${id}`).classList.add('active');
-        videoChunks.length = 0; // Reset buffer jika ganti kamera
+        
+        const canvas = document.getElementById('canvas-ai');
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
 
-    // --- 3. GALERI REPLAY & PENGHAPUSAN OTOMATIS ---
+    // --- 3. GALERI REPLAY & AUTO-DELETE 2 MENIT ---
     function simpanKeGaleri(judul) {
-        if (videoChunks.length < 10) return;
+        if (camBuffers[activeCam].length < 10) return;
         
         const idUnik = Date.now();
-        // Salin seluruh data 1-2 menit terakhir
-        const frameCopy = videoChunks.map(c => c.data); 
+        const frameCopy = [...camBuffers[activeCam]]; 
         
-        // Simpan ke daftar
         savedVideoReplays.push({
             id: idUnik,
             title: judul,
             cam: activeCam,
-            frames: frameCopy,
-            createdAt: Date.now()
+            frames: frameCopy
         });
         
         renderGaleri();
         kirimReplayKeWasit(frameCopy, judul);
 
-        // FITUR AUTOCLEAN: Hapus otomatis video tersimpan ini setelah 2 menit
+        // PENGHAPUSAN OTOMATIS: Klip di galeri otomatis terhapus permanen setelah tepat 120 detik (2 menit)
         setTimeout(() => {
             savedVideoReplays = savedVideoReplays.filter(item => item.id !== idUnik);
             renderGaleri();
-            console.log(`[Auto-Clean] Video Replay ID ${idUnik} telah dihapus otomatis.`);
-        }, REPLAY_DURATION_MS);
+            console.log(`[Auto-Clean] Klip replay ${idUnik} telah dihapus otomatis dari sistem.`);
+        }, 120000); // 120.000 ms = 2 Menit
     }
 
     function renderGaleri() {
@@ -276,7 +302,7 @@
         container.innerHTML = "";
         
         if (savedVideoReplays.length === 0) {
-            container.innerHTML = `<div style="color: #64748b; font-size: 0.8rem;">Tidak ada kejadian. Video lama otomatis terhapus (Setiap 1.5 Menit).</div>`;
+            container.innerHTML = `<div style="color: #64748b; font-size: 0.8rem;">Belum ada klip tersimpan. File lama terhapus otomatis setelah 2 menit.</div>`;
             return;
         }
 
@@ -286,7 +312,7 @@
             div.innerHTML = `
                 <div>
                     <strong>${replay.title}</strong><br>
-                    <small style="color:#38bdf8;">Durasi: ~1.5 Menit | Cam ${replay.cam}</small>
+                    <small style="color:#38bdf8;">Full Replay 1.5 Menit | Cam ${replay.cam}</small>
                 </div>
                 <div>
                     <button class="btn-blue" onclick="kirimReplayTersimpan(${replay.id})">📺 Kirim Wasit</button>
@@ -300,13 +326,13 @@
         const replay = savedVideoReplays.find(r => r.id === replayId);
         if (replay) {
             kirimReplayKeWasit(replay.frames, replay.title);
-            alert("Video Replay 1.5 Menit berhasil dikirim ke Wasit!");
+            alert("Klip Replay 1.5 Menit berhasil dikirim ke Monitor Wasit!");
         }
     }
 
     function kirimKeputusanManual(keputusanTeks) {
         db.ref('var/replay_wasit/decision').set(keputusanTeks);
-        alert(`Keputusan [${keputusanTeks}] berhasil diperbarui di Monitor Wasit!`);
+        alert(`Keputusan [${keputusanTeks}] dikirim ke Wasit!`);
     }
 
     function kirimReplayKeWasit(framesArray, teksKeputusan) {
@@ -314,10 +340,12 @@
             frames: framesArray,
             decision: teksKeputusan,
             timestamp: Date.now()
+        }).catch(err => {
+            alert("Gagal mengirim data replay yang besar. Pastikan koneksi stabil.");
         });
     }
 
-    // --- 4. WASIT (MEMUTAR REPLAY 1-2 MENIT) ---
+    // --- 4. WASIT (PEMUTAR REPLAY PANJANG) ---
     let wasitPlayInterval = null;
 
     function bacaStreamReplay() {
@@ -329,7 +357,7 @@
             const data = snapshot.val();
             if (data && data.frames && Array.isArray(data.frames)) {
                 
-                document.getElementById('status-wasit').innerText = "Status: MEMUTAR REPLAY (1-2 MENIT) ⏪";
+                document.getElementById('status-wasit').innerText = "Status: MEMUTAR REPLAY 1.5 MENIT ⏪";
                 textDecision.innerText = data.decision;
                 overlay.style.display = "block";
 
@@ -338,14 +366,13 @@
                 else if(data.decision.includes("FOUL") || data.decision.includes("NO GOAL")) textDecision.style.borderColor = "#e11d48";
                 else textDecision.style.borderColor = "#fff";
 
-                // Putar berurutan dari rentang 1.5 menit terakhir
                 if (wasitPlayInterval) clearInterval(wasitPlayInterval);
                 let i = 0;
                 wasitPlayInterval = setInterval(() => {
                     imgElement.src = data.frames[i];
                     i++;
-                    if (i >= data.frames.length) i = 0; // Ulang terus
-                }, 100); // 10 FPS
+                    if (i >= data.frames.length) i = 0; 
+                }, 100); 
             }
         });
     }
@@ -358,7 +385,7 @@
             if (!modelAI) modelAI = await cocoSsd.load();
             isAIActive = true;
             statusAI.innerText = "AI: Menganalisis Aktif 🟢";
-            jalankanDeteksiAI(); 
+            requestAnimationFrame(jalankanDeteksiAI); 
         } catch (error) { statusAI.innerText = "AI: Error ❌"; }
     }
 
@@ -368,16 +395,22 @@
         return (x_overlap * y_overlap > (box1[2] * box1[3] * 0.15)); 
     }
 
-    async function jalankanDeteksiAI() {
+    async function jalankanDeteksiAI(timestamp) {
         if (!isAIActive) return;
+
+        if (timestamp - lastAIDetectTime < 250) {
+            requestAnimationFrame(jalankanDeteksiAI);
+            return;
+        }
+        lastAIDetectTime = timestamp;
 
         const img = document.getElementById('stream-main');
         const canvas = document.getElementById('canvas-ai');
         const ctx = canvas.getContext('2d');
 
-        if (img.complete && img.naturalWidth !== 0 && !isDetecting) {
-            isDetecting = true; 
-            canvas.width = img.clientWidth; canvas.height = img.clientHeight;
+        if (img.complete && img.naturalWidth !== 0 && img.src) {
+            canvas.width = img.clientWidth; 
+            canvas.height = img.clientHeight;
 
             try {
                 const predictions = await modelAI.detect(img);
@@ -404,9 +437,7 @@
                             ctx.strokeRect(scaledBox[0], scaledBox[1], scaledBox[2], scaledBox[3]);
                             
                             const centerBola = scaledBox[0] + (scaledBox[2] / 2);
-                            if (centerBola < (canvas.width * 0.1) || centerBola > (canvas.width * 0.9)) {
-                                potensiGoal = true;
-                            }
+                            if (centerBola < (canvas.width * 0.1) || centerBola > (canvas.width * 0.9)) potensiGoal = true;
                         }
                     }
                 });
@@ -432,16 +463,14 @@
                     });
                 }
 
-                // AI Auto Trigger + Simpan Replay 1.5 Menit (Cooldown 15 Detik)
                 const now = Date.now();
-                if (now - lastAITrigger > 15000) {
+                if (now - lastAITrigger > 20000) { 
                     if (potensiGoal) { lastAITrigger = now; simpanKeGaleri("⚽ REVIEW: POTENSI GOAL"); }
                     else if (potensiHandball) { lastAITrigger = now; simpanKeGaleri("✋ REVIEW: POTENSI HANDBALL"); }
                     else if (potensiPelanggaran) { lastAITrigger = now; simpanKeGaleri("🛑 REVIEW: FOUL / TABRAKAN"); }
                 }
 
             } catch (err) {}
-            isDetecting = false; 
         }
         requestAnimationFrame(jalankanDeteksiAI);
     }
