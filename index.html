@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VAR FUTSAL PRO - Pause, Zoom & Perfect Sync</title>
+    <title>VAR FUTSAL PRO - Fixed & Ready</title>
     
     <!-- SDK Firebase (V8) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -47,17 +47,14 @@
         
         .hidden { display: none !important; }
         
-        /* Box Video Utama dengan Support Zoom & Pan */
         .video-box { position: relative; width: 100%; background: #000; border-radius: 8px; overflow: hidden; min-height: 350px; display: flex; align-items: center; justify-content: center; border: 3px solid #334155;}
         
-        /* Container untuk efek Zoom & Pan */
         .zoom-wrapper { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; cursor: grab; }
         .zoom-wrapper:active { cursor: grabbing; }
         
         video, img { width: 100%; height: auto; display: block; object-fit: cover; transition: transform 0.1s ease-out; transform-origin: center center; }
         canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
         
-        /* Kontrol Tambahan Pause & Zoom di Bawah Layar Utama */
         .review-controls { display: flex; gap: 5px; margin-top: 10px; background: #0f172a; padding: 8px; border-radius: 8px; border: 1px solid #334155; align-items: center; justify-content: space-between; }
         
         .cams-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 15px; }
@@ -119,7 +116,6 @@
                 <div class="video-box" id="box-operator">
                     <div class="cam-label" style="background:#e11d48; top:10px; right:10px; font-size:0.9rem;" id="main-label">Layar Utama (Live)</div>
                     
-                    <!-- Wrapper untuk fitur Zoom & Pan -->
                     <div class="zoom-wrapper" id="zoom-wrapper">
                         <img id="stream-main" src="" alt="Menunggu koneksi kamera...">
                     </div>
@@ -127,7 +123,6 @@
                     <canvas id="canvas-ai"></canvas>
                 </div>
 
-                <!-- TOMBOL KONTROL TAMBAHAN (PAUSE / PLAY & ZOOM) -->
                 <div class="review-controls">
                     <div>
                         <button class="btn-yellow" id="btn-pause-play" onclick="togglePausePlay()">⏸️ Pause</button>
@@ -168,7 +163,7 @@
                 <div>
                     <h3 style="margin-top:0; color:#38bdf8;">🎛️ Kontrol & Keputusan VAR</h3>
                     <div id="status-ai" class="status-badge" style="margin-bottom:10px;">AI: Menyiapkan...</div>
-                    <div class="status-badge" style="background:#10b981; margin-bottom:10px;">Pause, Zoom & Sync Active ⚡</div>
+                    <div class="status-badge" style="background:#10b981; margin-bottom:10px;">System Normal & Ready ⚡</div>
 
                     <div class="replay-list">
                         <h4 style="margin:0 0 10px 0; color:#94a3b8;">📼 Bank Replay Otomatis (1 Menit)</h4>
@@ -233,7 +228,6 @@
     let isPaused = false;
     let currentFrameIndex = 0;
     
-    // Variabel untuk Zoom & Pan (Geser Gambar)
     let zoomScale = 1;
     let panX = 0, panY = 0;
     let isDragging = false, startX = 0, startY = 0;
@@ -269,7 +263,6 @@
         else if (peran === 'wasit') { bacaStreamReplay(); }
     }
 
-    // --- FITUR ZOOM & PAN (GESER GAMBAR) ---
     function inisialisasiZoomPan() {
         const wrapper = document.getElementById('zoom-wrapper');
         const img = document.getElementById('stream-main');
@@ -291,7 +284,6 @@
 
         window.addEventListener('mouseup', () => { isDragging = false; });
 
-        // Scroll mouse untuk zoom
         wrapper.addEventListener('wheel', (e) => {
             e.preventDefault();
             if (e.deltaY < 0) {
@@ -490,7 +482,6 @@
         currentFrameIndex = 0;
         tampilkanFrameReview(currentFrameIndex);
 
-        // Auto play preview
         operatorPreviewInterval = setInterval(() => {
             if (!isPaused) {
                 currentFrameIndex++;
@@ -508,7 +499,6 @@
         document.getElementById('stream-main').src = frameData;
         document.getElementById('lbl-current-time').innerText = `${(idx / 10).toFixed(1)}s`;
 
-        // Sinkronkan ke wasit secara real-time
         db.ref('var/replay_wasit').update({
             current_frame: frameData,
             decision: `REVIEW: DETIK ${(idx / 10).toFixed(1)}s`
@@ -531,7 +521,7 @@
     function ubahDetikReplay(indexFrame) {
         if (!activeReviewFrames || activeReviewFrames.length === 0) return;
         
-        isPaused = true; // Auto pause saat operator menggeser slider detik manual
+        isPaused = true;
         document.getElementById('btn-pause-play').innerText = "▶️ Play";
         document.getElementById('btn-pause-play').style.background = "#16a34a";
 
@@ -595,7 +585,7 @@
                 timestamp: Date.now()
             });
 
-            alert("Klip Replay berhasil dikirim ke Monitor Wasit! Anda bisa Pause dan Zoom di layar kontrol.");
+            alert("Klip Replay berhasil dikirim ke Monitor Wasit!");
         }
     }
 
@@ -658,7 +648,7 @@
         try {
             if (!modelAI) modelAI = await cocoSsd.load();
             isAIActive = true;
-            statusAI.innerText = "Multi-AI Pause & Zoom Aktif 🟢";
+            statusAI.innerText = "Multi-AI System Normal 🟢";
             requestAnimationFrame(jalankanDeteksiAI); 
         } catch (error) { statusAI.innerText = "AI: Error ❌"; }
     }
@@ -761,7 +751,7 @@
                                 const bolaTengahY = bola[1] + (bola[3] / 2);
                                 const bahuPemain = orang[1] + (orang[3] * 0.15); 
                                 const lututPemain = orang[1] + (orang[3] * 0.75); 
-                                if (bolaTengahY > bahuPemain && bolaTengahY < lututPemann = true) {
+                                if (bolaTengahY > bahuPemain && bolaTengahY < lututPemain) {
                                     potensiHandball = true;
                                     ctx.fillStyle = "#f97316";
                                     ctx.beginPath();
