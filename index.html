@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VAR FUTSAL PRO - Auto-Delete & Zero Delay</title>
+    <title>VAR FUTSAL PRO - Clean AI Marker & Detailed Tracking</title>
     
     <!-- SDK Firebase (V8) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -29,6 +29,7 @@
         .btn-orange { background: #d97706; color: white; width: 31%; } .btn-orange:hover { background: #b45309; }
         .btn-yellow { background: #eab308; color: black; width: 48%; } .btn-yellow:hover { background: #ca8a04; color: white; }
         .btn-gray { background: #475569; color: white; width: 48%; } .btn-gray:hover { background: #334155; }
+        .btn-purple { background: #7c3aed; color: white; } .btn-purple:hover { background: #6d28d9; }
         
         .hidden { display: none !important; }
         
@@ -46,7 +47,7 @@
         /* Bank Replay Tersimpan */
         .replay-list { background: #0f172a; padding: 10px; border-radius: 8px; text-align: left; margin-top: 15px; border: 1px solid #334155;}
         .replay-item { background: #1e293b; padding: 8px; margin-bottom: 5px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #e11d48;}
-        .replay-item button { padding: 6px 10px; font-size: 0.8rem; margin: 0 2px;}
+        .replay-item button { padding: 6px 8px; font-size: 0.75rem; margin: 0 2px;}
 
         /* VAR Monitor Wasit Overlay */
         .var-overlay { position: absolute; bottom: 10%; left: 0; width: 100%; text-align: center; pointer-events: none; z-index: 10;}
@@ -57,14 +58,14 @@
 </head>
 <body>
 
-    <h1>⚽ VAR FUTSAL PRO (AUTO-DELETE)</h1>
+    <h1>⚽ VAR FUTSAL PRO (DETAIL MARKER)</h1>
 
     <!-- MENU UTAMA -->
     <div id="menu" class="card">
         <h3>Pilih Perangkat</h3>
         <button class="btn-blue" onclick="pilihPeran('kamera')">📱 Kamera Lapangan (HP)</button>
         <button class="btn-blue" onclick="pilihPeran('operator')">🎛️ Ruang Kontrol & AI (Laptop)</button>
-        <button class="btn-blue" onclick="pilihPeran('wasit')">📺 Monitor Wasit (Tablet/TV)</button>
+        <button class="btn-blue" onclick="pilihPeran('wasit')">📺 Monitor Wasit (Clean Broadcast)</button>
     </div>
 
     <!-- PANEL KAMERA -->
@@ -89,8 +90,9 @@
         
         <!-- Layar Utama -->
         <div class="video-box" id="box-operator">
-            <div class="cam-label" style="background:#e11d48; top:10px; right:10px; font-size:0.9rem;">Layar Utama (AI Aktif)</div>
+            <div class="cam-label" style="background:#e11d48; top:10px; right:10px; font-size:0.9rem;" id="main-label">Layar Utama (Live)</div>
             <img id="stream-main" src="" alt="Menunggu koneksi kamera...">
+            <!-- CANVAS PENANDA TITIK DETAIL AI -->
             <canvas id="canvas-ai"></canvas>
         </div>
 
@@ -109,14 +111,14 @@
         
         <div style="margin-top: 10px;">
             <div id="status-ai" class="status-badge">AI: Menyiapkan...</div>
-            <div class="status-badge" style="background:#16a34a;">Auto-Clean RAM & Klip Aktif 🗑️</div>
+            <button class="btn-purple" style="padding: 4px 10px; font-size:0.75rem;" onclick="simpanKeGaleri('📌 MANUAL REPLAY REVIEW')">📸 Simpan Klip 1.5 Min Sekarang</button>
         </div>
 
-        <!-- REPLAY 90 DETIK DENGAN PENGHAPUSAN OTOMATIS -->
+        <!-- REPLAY LIST -->
         <div class="replay-list">
-            <h4 style="margin:0 0 10px 0; color:#94a3b8;">📼 Bank Replay (Otomatis Hapus Setelah 2 Menit)</h4>
+            <h4 style="margin:0 0 10px 0; color:#94a3b8;">📼 Bank Replay (Bisa Dilihat Tanpa AI)</h4>
             <div id="replay-container">
-                <div style="color: #64748b; font-size: 0.8rem;">Menunggu AI mendeteksi kejadian...</div>
+                <div style="color: #64748b; font-size: 0.8rem;">Belum ada klip tersimpan. Tekan tombol simpan klip atau tunggu AI.</div>
             </div>
         </div>
 
@@ -135,7 +137,7 @@
 
     <!-- PANEL MONITOR WASIT -->
     <div id="panel-wasit" class="card hidden" style="max-width: 800px;">
-        <h3>📺 MONITOR WASIT (VAR)</h3>
+        <h3>📺 MONITOR WASIT (CLEAN BROADCAST)</h3>
         <div class="video-box" style="min-height: 400px;">
             <img id="img-wasit-placeholder" src="" alt="Menunggu Kejadian...">
             <div class="var-overlay" id="var-overlay" style="display: none;">
@@ -159,20 +161,18 @@
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // --- VARIABEL GLOBAL ---
     let currentStream = null, isFacingUser = false, isUploading = false;
     let cameraInterval = null;
     let modelAI = null, isAIActive = false;
     let activeCam = 1; 
 
-    // Buffer Memori: 900 Frame = ~90 Detik (1.5 Menit)
     const MAX_FRAMES = 900; 
     const camBuffers = { 1: [], 2: [], 3: [] }; 
     let savedVideoReplays = []; 
     let lastAITrigger = 0;
     let lastAIDetectTime = 0;
+    let operatorPreviewInterval = null;
 
-    // --- NAVIGASI ---
     function pilihPeran(peran) {
         document.getElementById('menu').classList.add('hidden');
         document.getElementById(`panel-${peran}`).classList.remove('hidden');
@@ -180,7 +180,6 @@
         else if (peran === 'wasit') { bacaStreamReplay(); }
     }
 
-    // --- 1. KAMERA (HP) ---
     async function mulaiKamera() {
         const video = document.getElementById('webcam');
         const camId = document.getElementById('cam-id').value;
@@ -206,13 +205,7 @@
                     isUploading = true; 
                     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                     const frameData = canvas.toDataURL('image/jpeg', 0.2); 
-                    
-                    try { 
-                        await db.ref(`var/cam_${camId}`).set(frameData); 
-                    } catch (e) {
-                    } finally { 
-                        isUploading = false; 
-                    }
+                    try { await db.ref(`var/cam_${camId}`).set(frameData); } catch (e) {} finally { isUploading = false; }
                 }
             }, 100); 
         } catch (err) { alert("Gagal Akses Kamera!"); }
@@ -240,23 +233,20 @@
         if(currentStream) mulaiKamera(); 
     }
 
-    // --- 2. OPERATOR (MULTI-STREAM & 90s BUFFER) ---
     function bacaMultiStream() {
         [1, 2, 3].forEach(id => {
             db.ref(`var/cam_${id}`).on('value', (snapshot) => {
                 const data = snapshot.val();
                 if (data) {
                     document.getElementById(`stream-cam${id}`).src = data;
-                    if (activeCam === id) document.getElementById('stream-main').src = data;
-                    
-                    camBuffers[id].push(data);
-                    // Hapus data live yang lebih dari 90 detik secara otomatis dari memori RAM
-                    if (camBuffers[id].length > MAX_FRAMES) {
-                        camBuffers[id].shift(); 
+                    if (activeCam === id && !operatorPreviewInterval) {
+                        document.getElementById('stream-main').src = data;
                     }
+                    camBuffers[id].push(data);
+                    if (camBuffers[id].length > MAX_FRAMES) camBuffers[id].shift(); 
                 } else {
                     document.getElementById(`stream-cam${id}`).removeAttribute('src');
-                    if (activeCam === id) document.getElementById('stream-main').removeAttribute('src');
+                    if (activeCam === id && !operatorPreviewInterval) document.getElementById('stream-main').removeAttribute('src');
                 }
             });
         });
@@ -267,34 +257,62 @@
         document.querySelectorAll('.cam-thumb').forEach(el => el.classList.remove('active'));
         document.getElementById(`thumb-${id}`).classList.add('active');
         
+        if (operatorPreviewInterval) {
+            clearInterval(operatorPreviewInterval);
+            operatorPreviewInterval = null;
+            document.getElementById('main-label').innerText = "Layar Utama (Live)";
+            document.getElementById('main-label').style.background = "#e11d48";
+        }
+        
         const canvas = document.getElementById('canvas-ai');
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
 
-    // --- 3. GALERI REPLAY & AUTO-DELETE 2 MENIT ---
+    function previewReplayLokal(replayId) {
+        const replay = savedVideoReplays.find(r => r.id === replayId);
+        if (!replay || !replay.frames || replay.frames.length === 0) return;
+
+        if (operatorPreviewInterval) clearInterval(operatorPreviewInterval);
+
+        document.getElementById('main-label').innerText = `Preview Replay (${replay.title})`;
+        document.getElementById('main-label').style.background = "#d97706";
+
+        let i = 0;
+        const mainImg = document.getElementById('stream-main');
+        operatorPreviewInterval = setInterval(() => {
+            mainImg.src = replay.frames[i];
+            i++;
+            if (i >= replay.frames.length) i = 0; 
+        }, 100);
+    }
+
+    function kembaliKeLive() {
+        if (operatorPreviewInterval) {
+            clearInterval(operatorPreviewInterval);
+            operatorPreviewInterval = null;
+        }
+        document.getElementById('main-label').innerText = "Layar Utama (Live)";
+        document.getElementById('main-label').style.background = "#e11d48";
+    }
+
     function simpanKeGaleri(judul) {
-        if (camBuffers[activeCam].length < 10) return;
+        if (camBuffers[activeCam].length < 10) {
+            alert("Buffer rekaman belum cukup, tunggu beberapa detik.");
+            return;
+        }
         
         const idUnik = Date.now();
         const frameCopy = [...camBuffers[activeCam]]; 
         
-        savedVideoReplays.push({
-            id: idUnik,
-            title: judul,
-            cam: activeCam,
-            frames: frameCopy
-        });
-        
+        savedVideoReplays.push({ id: idUnik, title: judul, cam: activeCam, frames: frameCopy });
         renderGaleri();
-        kirimReplayKeWasit(frameCopy, judul);
+        alert(`Klip [${judul}] berhasil disimpan ke Bank Replay!`);
 
-        // PENGHAPUSAN OTOMATIS: Klip di galeri otomatis terhapus permanen setelah tepat 120 detik (2 menit)
         setTimeout(() => {
             savedVideoReplays = savedVideoReplays.filter(item => item.id !== idUnik);
             renderGaleri();
-            console.log(`[Auto-Clean] Klip replay ${idUnik} telah dihapus otomatis dari sistem.`);
-        }, 120000); // 120.000 ms = 2 Menit
+        }, 120000);
     }
 
     function renderGaleri() {
@@ -312,9 +330,11 @@
             div.innerHTML = `
                 <div>
                     <strong>${replay.title}</strong><br>
-                    <small style="color:#38bdf8;">Full Replay 1.5 Menit | Cam ${replay.cam}</small>
+                    <small style="color:#38bdf8;">Cam ${replay.cam} | 1.5 Menit</small>
                 </div>
                 <div>
+                    <button class="btn-yellow" onclick="previewReplayLokal(${replay.id})">▶️ Lihat</button>
+                    <button class="btn-gray" onclick="kembaliKeLive()">🔴 Live</button>
                     <button class="btn-blue" onclick="kirimReplayTersimpan(${replay.id})">📺 Kirim Wasit</button>
                 </div>
             `;
@@ -326,7 +346,7 @@
         const replay = savedVideoReplays.find(r => r.id === replayId);
         if (replay) {
             kirimReplayKeWasit(replay.frames, replay.title);
-            alert("Klip Replay 1.5 Menit berhasil dikirim ke Monitor Wasit!");
+            alert("Klip Replay berhasil dikirim ke Monitor Wasit!");
         }
     }
 
@@ -341,11 +361,10 @@
             decision: teksKeputusan,
             timestamp: Date.now()
         }).catch(err => {
-            alert("Gagal mengirim data replay yang besar. Pastikan koneksi stabil.");
+            alert("Gagal mengirim data replay.");
         });
     }
 
-    // --- 4. WASIT (PEMUTAR REPLAY PANJANG) ---
     let wasitPlayInterval = null;
 
     function bacaStreamReplay() {
@@ -357,7 +376,7 @@
             const data = snapshot.val();
             if (data && data.frames && Array.isArray(data.frames)) {
                 
-                document.getElementById('status-wasit').innerText = "Status: MEMUTAR REPLAY 1.5 MENIT ⏪";
+                document.getElementById('status-wasit').innerText = "Status: MEMUTAR REPLAY (BERSIH) ⏪";
                 textDecision.innerText = data.decision;
                 overlay.style.display = "block";
 
@@ -377,14 +396,13 @@
         });
     }
 
-    // --- 5. SCAN AI ---
     async function mulaiAutoAI() {
         const statusAI = document.getElementById('status-ai');
         statusAI.innerText = "AI: Memuat Model ⏳";
         try {
             if (!modelAI) modelAI = await cocoSsd.load();
             isAIActive = true;
-            statusAI.innerText = "AI: Menganalisis Aktif 🟢";
+            statusAI.innerText = "AI: Pelacakan Detail Aktif 🟢";
             requestAnimationFrame(jalankanDeteksiAI); 
         } catch (error) { statusAI.innerText = "AI: Error ❌"; }
     }
@@ -408,6 +426,12 @@
         const canvas = document.getElementById('canvas-ai');
         const ctx = canvas.getContext('2d');
 
+        if (operatorPreviewInterval) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            requestAnimationFrame(jalankanDeteksiAI);
+            return;
+        }
+
         if (img.complete && img.naturalWidth !== 0 && img.src) {
             canvas.width = img.clientWidth; 
             canvas.height = img.clientHeight;
@@ -427,14 +451,33 @@
                         const [x, y, w, h] = pred.bbox;
                         const scaledBox = [x * scaleX, y * scaleY, w * scaleX, h * scaleY];
 
+                        // TITIK MARKER DETAIL PERGERAKAN (Tanpa Garis Kotak)
+                        const centerX = scaledBox[0] + (scaledBox[2] / 2);
+                        const centerY = scaledBox[1] + (scaledBox[3] / 2);
+
                         if (pred.class === 'person') {
                             orangTerdeteksi.push(scaledBox);
-                            ctx.strokeStyle = "#38bdf8"; ctx.lineWidth = 2;
-                            ctx.strokeRect(scaledBox[0], scaledBox[1], scaledBox[2], scaledBox[3]);
+                            
+                            // Gambar Titik Fokus & Label Nama di Kepala/Tengah Pemain
+                            ctx.fillStyle = "#38bdf8";
+                            ctx.beginPath();
+                            ctx.arc(centerX, scaledBox[1] + 5, 4, 0, 2 * Math.PI);
+                            ctx.fill();
+
+                            ctx.font = "10px sans-serif";
+                            ctx.fillText("Pemain", centerX - 18, scaledBox[1] - 4);
                         } else if (pred.class === 'sports ball') {
                             bolaTerdeteksi.push(scaledBox);
-                            ctx.strokeStyle = "#facc15"; ctx.lineWidth = 3;
-                            ctx.strokeRect(scaledBox[0], scaledBox[1], scaledBox[2], scaledBox[3]);
+                            
+                            // Gambar Titik Kuning Bersinar untuk Bola
+                            ctx.fillStyle = "#facc15";
+                            ctx.beginPath();
+                            ctx.arc(centerX, centerY, 6, 0, 2 * Math.PI);
+                            ctx.fill();
+
+                            ctx.fillStyle = "#ffffff";
+                            ctx.font = "bold 11px sans-serif";
+                            ctx.fillText("⚽ BOLA", centerX + 10, centerY + 4);
                             
                             const centerBola = scaledBox[0] + (scaledBox[2] / 2);
                             if (centerBola < (canvas.width * 0.1) || centerBola > (canvas.width * 0.9)) potensiGoal = true;
@@ -445,7 +488,16 @@
                 if (orangTerdeteksi.length >= 2) {
                     for(let i=0; i<orangTerdeteksi.length; i++){
                         for(let j=i+1; j<orangTerdeteksi.length; j++){
-                            if(cekTumpangTindih(orangTerdeteksi[i], orangTerdeteksi[j])) potensiPelanggaran = true;
+                            if(cekTumpangTindih(orangTerdeteksi[i], orangTerdeteksi[j])) {
+                                potensiPelanggaran = true;
+                                // Tandai titik tabrakan merah
+                                const midX = (orangTerdeteksi[i][0] + orangTerdeteksi[j][0]) / 2;
+                                const midY = (orangTerdeteksi[i][1] + orangTerdeteksi[j][1]) / 2;
+                                ctx.fillStyle = "#ef4444";
+                                ctx.beginPath();
+                                ctx.arc(midX, midY, 8, 0, 2 * Math.PI);
+                                ctx.fill();
+                            }
                         }
                     }
                 }
@@ -457,7 +509,14 @@
                                 const bolaTengahY = bola[1] + (bola[3] / 2);
                                 const bahuPemain = orang[1] + (orang[3] * 0.15); 
                                 const lututPemain = orang[1] + (orang[3] * 0.75); 
-                                if (bolaTengahY > bahuPemain && bolaTengahY < lututPemain) potensiHandball = true;
+                                if (bolaTengahY > bahuPemain && bolaTengahY < lututPemain) {
+                                    potensiHandball = true;
+                                    // Tandai titik handball oranye
+                                    ctx.fillStyle = "#f97316";
+                                    ctx.beginPath();
+                                    ctx.arc(bola[0], bola[1], 7, 0, 2 * Math.PI);
+                                    ctx.fill();
+                                }
                             }
                         });
                     });
