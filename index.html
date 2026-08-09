@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VAR FUTSAL AI - Broadcast Pro & Handball</title>
+    <title>VAR FUTSAL PRO - 1-2 Min Replay & Auto Delete</title>
     
     <!-- SDK Firebase -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -15,10 +15,12 @@
 
     <style>
         * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
-        body { background: #0f172a; color: #f8fafc; text-align: center; margin: 0; padding: 15px; }
-        h1 { color: #38bdf8; font-size: 1.5rem; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 2px;}
-        .card { background: #1e293b; padding: 20px; border-radius: 12px; max-width: 550px; margin: 0 auto 15px auto; border: 1px solid #334155; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5); }
-        button { border: none; padding: 12px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; margin: 5px 2px; transition: 0.2s; font-size: 0.9rem; }
+        body { background: #0f172a; color: #f8fafc; text-align: center; margin: 0; padding: 10px; }
+        h1 { color: #38bdf8; font-size: 1.5rem; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 2px;}
+        .card { background: #1e293b; padding: 15px; border-radius: 12px; max-width: 600px; margin: 0 auto 15px auto; border: 1px solid #334155; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5); }
+        button { border: none; padding: 10px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; margin: 4px 2px; transition: 0.2s; font-size: 0.9rem; }
+        
+        select { background: #334155; color: white; padding: 10px; border-radius: 8px; border: 1px solid #475569; width: 100%; margin-bottom: 10px; font-weight: bold;}
         
         .btn-blue { background: #0284c7; color: white; width: 100%; } .btn-blue:hover { background: #0369a1; }
         .btn-green { background: #16a34a; color: white; width: 31%; } .btn-green:hover { background: #15803d; }
@@ -29,26 +31,32 @@
         
         .hidden { display: none !important; }
         
-        /* Box Video / TV Monitor */
-        .video-box { position: relative; width: 100%; background: #000; border-radius: 8px; overflow: hidden; min-height: 280px; display: flex; align-items: center; justify-content: center; border: 3px solid #334155;}
+        /* Box Video Utama */
+        .video-box { position: relative; width: 100%; background: #000; border-radius: 8px; overflow: hidden; min-height: 250px; display: flex; align-items: center; justify-content: center; border: 3px solid #334155;}
         video, img { width: 100%; height: auto; display: block; }
         canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
         
+        /* Grid 3 Kamera */
+        .cams-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+        .cam-thumb { background: #000; border: 2px solid #475569; border-radius: 6px; cursor: pointer; overflow: hidden; position: relative;}
+        .cam-thumb.active { border-color: #38bdf8; box-shadow: 0 0 10px rgba(56, 189, 248, 0.5); }
+        .cam-label { position: absolute; top: 2px; left: 2px; background: rgba(0,0,0,0.7); font-size: 0.7rem; padding: 2px 6px; border-radius: 4px;}
+
+        /* Bank Replay Tersimpan */
+        .replay-list { background: #0f172a; padding: 10px; border-radius: 8px; text-align: left; margin-top: 15px; border: 1px solid #334155;}
+        .replay-item { background: #1e293b; padding: 8px; margin-bottom: 5px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #38bdf8;}
+        .replay-item button { padding: 6px 10px; font-size: 0.8rem; margin: 0 2px;}
+
         /* VAR Monitor Wasit Overlay */
         .var-overlay { position: absolute; bottom: 10%; left: 0; width: 100%; text-align: center; pointer-events: none; }
-        .var-text { background: rgba(0, 0, 0, 0.85); color: #fff; padding: 10px 20px; font-size: 1.5rem; font-weight: 900; text-transform: uppercase; border: 2px solid #fff; display: inline-block; box-shadow: 0 0 15px rgba(255,255,255,0.5); letter-spacing: 2px;}
-        .var-logo { position: absolute; top: 10px; right: 10px; background: #e11d48; color: white; font-weight: bold; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; z-index: 10; letter-spacing: 1px;}
+        .var-text { background: rgba(0, 0, 0, 0.85); color: #fff; padding: 10px 20px; font-size: 1.3rem; font-weight: 900; text-transform: uppercase; border: 2px solid #fff; display: inline-block; box-shadow: 0 0 15px rgba(255,255,255,0.5);}
         
         .status-badge { font-size: 0.8rem; padding: 4px 8px; border-radius: 4px; background: #334155; display: inline-block; margin-top: 8px; }
-        
-        /* Kontrol VAR Panel */
-        .var-panel { background: #0f172a; border: 2px dashed #475569; padding: 15px; border-radius: 8px; margin-top: 15px; }
-        .var-panel h4 { margin: 0 0 10px 0; color: #94a3b8; text-transform: uppercase; font-size: 0.9rem; }
     </style>
 </head>
 <body>
 
-    <h1>⚽ VAR FUTSAL SYSTEM</h1>
+    <h1>⚽ VAR FUTSAL PRO (1-2 MIN REPLAY)</h1>
 
     <!-- MENU UTAMA -->
     <div id="menu" class="card">
@@ -60,7 +68,12 @@
 
     <!-- PANEL KAMERA -->
     <div id="panel-kamera" class="card hidden">
-        <h3>📱 Kamera Utama</h3>
+        <h3>📱 Setup Kamera</h3>
+        <select id="cam-id">
+            <option value="1">Kamera 1 (Kiri Lapangan)</option>
+            <option value="2">Kamera 2 (Tengah/Wasit)</option>
+            <option value="3">Kamera 3 (Kanan Lapangan)</option>
+        </select>
         <div class="video-box"><video id="webcam" autoplay playsinline muted></video></div>
         <br>
         <button class="btn-blue" onclick="mulaiKamera()">🟢 Mulai Live Stream</button>
@@ -69,22 +82,45 @@
     </div>
 
     <!-- PANEL KONTROL WASIT -->
-    <div id="panel-operator" class="card hidden">
+    <div id="panel-operator" class="card hidden" style="max-width: 800px;">
         <h3>🎛️ RUANG KONTROL VAR</h3>
+        
+        <!-- Layar Utama -->
         <div class="video-box" id="box-operator">
-            <div class="var-logo">LIVE SCAN</div>
-            <img id="stream-operator" src="" alt="Menunggu Stream Kamera...">
+            <div class="cam-label" style="background:#e11d48; top:10px; right:10px; font-size:0.9rem;">Layar Utama (AI Aktif)</div>
+            <img id="stream-main" src="" alt="Pilih kamera di bawah...">
             <canvas id="canvas-ai"></canvas>
         </div>
+
+        <!-- 3 Layar CCTV -->
+        <div class="cams-grid">
+            <div class="cam-thumb active" id="thumb-1" onclick="setMainCam(1)">
+                <div class="cam-label">CAM 1</div><img id="stream-cam1" src="">
+            </div>
+            <div class="cam-thumb" id="thumb-2" onclick="setMainCam(2)">
+                <div class="cam-label">CAM 2</div><img id="stream-cam2" src="">
+            </div>
+            <div class="cam-thumb" id="thumb-3" onclick="setMainCam(3)">
+                <div class="cam-label">CAM 3</div><img id="stream-cam3" src="">
+            </div>
+        </div>
         
-        <div style="display: flex; justify-content: center; gap: 10px; margin-top: 10px;">
-            <div id="status-op" class="status-badge">Kamera: Menunggu...</div>
+        <div style="margin-top: 10px;">
             <div id="status-ai" class="status-badge">AI: Menyiapkan...</div>
+            <div id="status-timer" class="status-badge" style="background:#0284c7;">Auto-Clean: 90s</div>
         </div>
 
-        <!-- DASHBOARD KEPUTUSAN VAR -->
-        <div class="var-panel">
-            <h4>Kirim Keputusan ke Monitor Wasit</h4>
+        <!-- REPLAY 1-2 MENIT TERSIMPAN -->
+        <div class="replay-list">
+            <h4 style="margin:0 0 10px 0; color:#94a3b8;">📼 Video Kejadian (1-2 Menit Terakhir)</h4>
+            <div id="replay-container">
+                <div style="color: #64748b; font-size: 0.8rem;">Menunggu AI mendeteksi kejadian...</div>
+            </div>
+        </div>
+
+        <!-- DASHBOARD KEPUTUSAN -->
+        <div class="replay-list" style="margin-top: 10px;">
+            <h4 style="margin:0 0 10px 0; color:#94a3b8;">Kirim Keputusan Akhir ke Wasit</h4>
             <div style="display: flex; flex-wrap: wrap; justify-content: space-between;">
                 <button class="btn-green" onclick="kirimKeputusanManual('⚽ DECISION: GOAL')">⚽ GOAL</button>
                 <button class="btn-red" onclick="kirimKeputusanManual('❌ DECISION: NO GOAL')">❌ NO GOAL</button>
@@ -92,7 +128,6 @@
                 <button class="btn-yellow" onclick="kirimKeputusanManual('✋ DECISION: HANDBALL')">✋ HANDBALL</button>
                 <button class="btn-gray" onclick="kirimKeputusanManual('✅ DECISION: PLAY ON')">✅ PLAY ON</button>
             </div>
-            <button class="btn-blue" style="margin-top: 10px;" onclick="kirimKeputusanManual('🔄 VAR REVIEW (MANUAL)')">⏪ Kirim Replay (Tanpa Keputusan)</button>
         </div>
     </div>
 
@@ -100,10 +135,10 @@
     <div id="panel-wasit" class="card hidden" style="max-width: 800px;">
         <h3>📺 MONITOR WASIT (VAR)</h3>
         <div class="video-box" style="min-height: 400px;">
-            <div class="var-logo">VAR BROADCAST</div>
-            <img id="stream-wasit" src="" alt="Menunggu Kejadian...">
+            <!-- Gunakan elemen VIDEO agar mendukung replay durasi panjang (1-2 menit) -->
+            <video id="video-wasit" autoplay loop controls style="display:none; width:100%; height:auto;"></video>
+            <img id="img-wasit-placeholder" src="" alt="Menunggu Kejadian...">
             
-            <!-- Teks Keputusan VAR Ala TV -->
             <div class="var-overlay" id="var-overlay" style="display: none;">
                 <div class="var-text" id="var-decision-text">VAR REVIEW</div>
             </div>
@@ -126,47 +161,39 @@
     const db = firebase.database();
 
     // --- VARIABEL GLOBAL ---
-    let currentStream = null, isFacingUser = false;
-    let modelAI = null, isAIActive = false, isDetecting = false, isUploading = false;
-    
-    // Sistem Buffer Replay & Cooldown AI
-    const frameBuffer = [];
-    const MAX_FRAMES = 15; 
-    let wasitPlayInterval = null;
-    let lastAIAutoTrigger = 0; // Mencegah AI spam pengiriman
+    let currentStream = null, isFacingUser = false, isUploading = false;
+    let modelAI = null, isAIActive = false, isDetecting = false;
+    let activeCam = 1; 
 
-    if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-        alert("PENTING: Akses kamera butuh koneksi HTTPS (Link Netlify).");
-    }
+    // Buffer Replay Video (1.5 Menit = 90 Detik)
+    const REPLAY_DURATION_MS = 90000; // 90 Detik (1.5 Menit)
+    const videoChunks = [];
+    let savedVideoReplays = []; // Bank Video Replay
+    let lastAITrigger = 0;
 
     // --- NAVIGASI ---
     function pilihPeran(peran) {
         document.getElementById('menu').classList.add('hidden');
         document.getElementById(`panel-${peran}`).classList.remove('hidden');
-        
-        if (peran === 'operator') {
-            bacaStreamLive(); 
-            mulaiAutoAI(); 
-        } else if (peran === 'wasit') {
-            bacaStreamReplay(); 
-        }
+        if (peran === 'operator') { bacaMultiStream(); mulaiAutoAI(); }
+        else if (peran === 'wasit') { bacaStreamReplay(); }
     }
 
     // --- 1. KAMERA (HP) ---
     async function mulaiKamera() {
         const video = document.getElementById('webcam');
-        const statusCam = document.getElementById('status-cam');
+        const camId = document.getElementById('cam-id').value;
         
         if (currentStream) currentStream.getTracks().forEach(track => track.stop());
-
         const mode = isFacingUser ? "user" : "environment";
+        
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: mode, width: { ideal: 320 }, height: { ideal: 240 } }, audio: false
+                video: { facingMode: mode, width: { ideal: 320 }, height: { ideal: 240 } }
             });
             currentStream = stream;
             video.srcObject = stream;
-            statusCam.innerText = "Status: Live Stream Aktif 🔴";
+            document.getElementById('status-cam').innerText = `Status: Live Stream (Cam ${camId}) 🔴`;
 
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
@@ -177,7 +204,7 @@
                     isUploading = true; 
                     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                     const frameData = canvas.toDataURL('image/jpeg', 0.3);
-                    try { await db.ref('var/live_stream').set(frameData); } 
+                    try { await db.ref(`var/cam_${camId}`).set(frameData); } 
                     catch (e) {} finally { isUploading = false; }
                 }
             }, 100); 
@@ -185,55 +212,116 @@
     }
     function tukarKamera() { isFacingUser = !isFacingUser; mulaiKamera(); }
 
-    // --- 2. OPERATOR (KONTROL) ---
-    function bacaStreamLive() {
-        db.ref('var/live_stream').on('value', (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                document.getElementById('stream-operator').src = data;
-                document.getElementById('status-op').innerText = "Kamera: Terhubung 🟢";
-                
-                frameBuffer.push(data);
-                if (frameBuffer.length > MAX_FRAMES) frameBuffer.shift(); 
-            }
-        });
-    }
-
-    // --- 3. PENGIRIMAN KEPUTUSAN VAR ---
-    // Fungsi Manual dari tombol Operator
-    function kirimKeputusanManual(keputusanTeks) {
-        if (frameBuffer.length < 5) { alert("Menunggu video terkumpul..."); return; }
-        
-        db.ref('var/replay_wasit').set({
-            frames: frameBuffer,
-            decision: keputusanTeks,
-            timestamp: Date.now()
-        });
-        alert(`Tayangan & Keputusan [${keputusanTeks}] telah dikirim ke Monitor Wasit!`);
-    }
-
-    // Fungsi Otomatis dari AI
-    function triggerAIAutoReplay(keputusanTeks) {
-        const now = Date.now();
-        // Cooldown 8 detik agar tidak spam otomatis
-        if (now - lastAIAutoTrigger > 8000) {
-            lastAIAutoTrigger = now;
-            
-            db.ref('var/replay_wasit').set({
-                frames: frameBuffer,
-                decision: keputusanTeks,
-                timestamp: now
+    // --- 2. OPERATOR (KONTROL MULTI-STREAM) ---
+    function bacaMultiStream() {
+        [1, 2, 3].forEach(id => {
+            db.ref(`var/cam_${id}`).on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    document.getElementById(`stream-cam${id}`).src = data;
+                    if (activeCam === id) {
+                        document.getElementById('stream-main').src = data;
+                        
+                        // Simpan frame berstempel waktu untuk pemotongan klip 1-2 menit
+                        videoChunks.push({ timestamp: Date.now(), data: data });
+                        
+                        // MANAJEMEN MEMORI: Hapus otomatis data yang lebih tua dari 1.5 Menit (90 Detik)
+                        const cutoff = Date.now() - REPLAY_DURATION_MS;
+                        while (videoChunks.length > 0 && videoChunks[0].timestamp < cutoff) {
+                            videoChunks.shift(); // Hapus permanen dari memori
+                        }
+                    }
+                }
             });
-            
-            // Efek visual di layar operator
-            document.getElementById('box-operator').style.borderColor = "#e11d48";
-            setTimeout(() => { document.getElementById('box-operator').style.borderColor = "#334155"; }, 2000);
+        });
+    }
+
+    function setMainCam(id) {
+        activeCam = id;
+        document.querySelectorAll('.cam-thumb').forEach(el => el.classList.remove('active'));
+        document.getElementById(`thumb-${id}`).classList.add('active');
+        videoChunks.length = 0; // Reset buffer jika ganti kamera
+    }
+
+    // --- 3. GALERI REPLAY & PENGHAPUSAN OTOMATIS ---
+    function simpanKeGaleri(judul) {
+        if (videoChunks.length < 10) return;
+        
+        const idUnik = Date.now();
+        // Salin seluruh data 1-2 menit terakhir
+        const frameCopy = videoChunks.map(c => c.data); 
+        
+        // Simpan ke daftar
+        savedVideoReplays.push({
+            id: idUnik,
+            title: judul,
+            cam: activeCam,
+            frames: frameCopy,
+            createdAt: Date.now()
+        });
+        
+        renderGaleri();
+        kirimReplayKeWasit(frameCopy, judul);
+
+        // FITUR AUTOCLEAN: Hapus otomatis video tersimpan ini setelah 2 menit
+        setTimeout(() => {
+            savedVideoReplays = savedVideoReplays.filter(item => item.id !== idUnik);
+            renderGaleri();
+            console.log(`[Auto-Clean] Video Replay ID ${idUnik} telah dihapus otomatis.`);
+        }, REPLAY_DURATION_MS);
+    }
+
+    function renderGaleri() {
+        const container = document.getElementById('replay-container');
+        container.innerHTML = "";
+        
+        if (savedVideoReplays.length === 0) {
+            container.innerHTML = `<div style="color: #64748b; font-size: 0.8rem;">Tidak ada kejadian. Video lama otomatis terhapus (Setiap 1.5 Menit).</div>`;
+            return;
+        }
+
+        savedVideoReplays.slice().reverse().forEach((replay) => {
+            const div = document.createElement('div');
+            div.className = "replay-item";
+            div.innerHTML = `
+                <div>
+                    <strong>${replay.title}</strong><br>
+                    <small style="color:#38bdf8;">Durasi: ~1.5 Menit | Cam ${replay.cam}</small>
+                </div>
+                <div>
+                    <button class="btn-blue" onclick="kirimReplayTersimpan(${replay.id})">📺 Kirim Wasit</button>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function kirimReplayTersimpan(replayId) {
+        const replay = savedVideoReplays.find(r => r.id === replayId);
+        if (replay) {
+            kirimReplayKeWasit(replay.frames, replay.title);
+            alert("Video Replay 1.5 Menit berhasil dikirim ke Wasit!");
         }
     }
 
-    // --- 4. WASIT (MONITOR REPLAY) ---
+    function kirimKeputusanManual(keputusanTeks) {
+        db.ref('var/replay_wasit/decision').set(keputusanTeks);
+        alert(`Keputusan [${keputusanTeks}] berhasil diperbarui di Monitor Wasit!`);
+    }
+
+    function kirimReplayKeWasit(framesArray, teksKeputusan) {
+        db.ref('var/replay_wasit').set({
+            frames: framesArray,
+            decision: teksKeputusan,
+            timestamp: Date.now()
+        });
+    }
+
+    // --- 4. WASIT (MEMUTAR REPLAY 1-2 MENIT) ---
+    let wasitPlayInterval = null;
+
     function bacaStreamReplay() {
-        const imgElement = document.getElementById('stream-wasit');
+        const imgElement = document.getElementById('img-wasit-placeholder');
         const overlay = document.getElementById('var-overlay');
         const textDecision = document.getElementById('var-decision-text');
 
@@ -241,30 +329,28 @@
             const data = snapshot.val();
             if (data && data.frames && Array.isArray(data.frames)) {
                 
-                document.getElementById('status-wasit').innerText = "Status: MEMUTAR REPLAY ⏪";
-                
+                document.getElementById('status-wasit').innerText = "Status: MEMUTAR REPLAY (1-2 MENIT) ⏪";
                 textDecision.innerText = data.decision;
                 overlay.style.display = "block";
 
-                // Ubah warna teks berdasarkan jenis keputusan
-                if(data.decision.includes("GOAL") && !data.decision.includes("NO GOAL")) textDecision.style.borderColor = "#16a34a"; // Hijau
-                else if(data.decision.includes("HANDBALL")) textDecision.style.borderColor = "#eab308"; // Kuning Emas
-                else if(data.decision.includes("FOUL") || data.decision.includes("NO GOAL")) textDecision.style.borderColor = "#e11d48"; // Merah
-                else textDecision.style.borderColor = "#fff"; // Putih
+                if(data.decision.includes("GOAL") && !data.decision.includes("NO GOAL")) textDecision.style.borderColor = "#16a34a";
+                else if(data.decision.includes("HANDBALL")) textDecision.style.borderColor = "#eab308";
+                else if(data.decision.includes("FOUL") || data.decision.includes("NO GOAL")) textDecision.style.borderColor = "#e11d48";
+                else textDecision.style.borderColor = "#fff";
 
-                // Putar Ulang Video (Slow Motion)
+                // Putar berurutan dari rentang 1.5 menit terakhir
                 if (wasitPlayInterval) clearInterval(wasitPlayInterval);
                 let i = 0;
                 wasitPlayInterval = setInterval(() => {
                     imgElement.src = data.frames[i];
                     i++;
-                    if (i >= data.frames.length) i = 0; 
-                }, 150); 
+                    if (i >= data.frames.length) i = 0; // Ulang terus
+                }, 100); // 10 FPS
             }
         });
     }
 
-    // --- 5. AI AUTO SCAN (GOAL, FOUL & HANDBALL) ---
+    // --- 5. SCAN AI ---
     async function mulaiAutoAI() {
         const statusAI = document.getElementById('status-ai');
         statusAI.innerText = "AI: Memuat Model ⏳";
@@ -276,17 +362,16 @@
         } catch (error) { statusAI.innerText = "AI: Error ❌"; }
     }
 
-    // Fungsi cek tabrakan 2 objek
     function cekTumpangTindih(box1, box2) {
         const x_overlap = Math.max(0, Math.min(box1[0] + box1[2], box2[0] + box2[2]) - Math.max(box1[0], box2[0]));
         const y_overlap = Math.max(0, Math.min(box1[1] + box1[3], box2[1] + box2[3]) - Math.max(box1[1], box2[1]));
-        return (x_overlap * y_overlap > (box1[2] * box1[3] * 0.15)); // Toleransi overlap
+        return (x_overlap * y_overlap > (box1[2] * box1[3] * 0.15)); 
     }
 
     async function jalankanDeteksiAI() {
         if (!isAIActive) return;
 
-        const img = document.getElementById('stream-operator');
+        const img = document.getElementById('stream-main');
         const canvas = document.getElementById('canvas-ai');
         const ctx = canvas.getContext('2d');
 
@@ -298,17 +383,12 @@
                 const predictions = await modelAI.detect(img);
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                let orangTerdeteksi = [];
-                let bolaTerdeteksi = [];
-                
-                let potensiGoal = false;
-                let potensiPelanggaran = false;
-                let potensiHandball = false;
+                let orangTerdeteksi = [], bolaTerdeteksi = [];
+                let potensiGoal = false, potensiPelanggaran = false, potensiHandball = false;
 
                 const scaleX = canvas.width / img.naturalWidth;
                 const scaleY = canvas.height / img.naturalHeight;
 
-                // Pisahkan deteksi Orang dan Bola
                 predictions.forEach(pred => {
                     if (pred.score > 0.4) {
                         const [x, y, w, h] = pred.bbox;
@@ -316,17 +396,13 @@
 
                         if (pred.class === 'person') {
                             orangTerdeteksi.push(scaledBox);
-                            ctx.strokeStyle = "#38bdf8"; 
-                            ctx.lineWidth = 2;
+                            ctx.strokeStyle = "#38bdf8"; ctx.lineWidth = 2;
                             ctx.strokeRect(scaledBox[0], scaledBox[1], scaledBox[2], scaledBox[3]);
-                        } 
-                        else if (pred.class === 'sports ball') {
+                        } else if (pred.class === 'sports ball') {
                             bolaTerdeteksi.push(scaledBox);
-                            ctx.strokeStyle = "#facc15"; 
-                            ctx.lineWidth = 3;
+                            ctx.strokeStyle = "#facc15"; ctx.lineWidth = 3;
                             ctx.strokeRect(scaledBox[0], scaledBox[1], scaledBox[2], scaledBox[3]);
                             
-                            // Deteksi GOAL (Bola di ujung kanan/kiri lapangan)
                             const centerBola = scaledBox[0] + (scaledBox[2] / 2);
                             if (centerBola < (canvas.width * 0.1) || centerBola > (canvas.width * 0.9)) {
                                 potensiGoal = true;
@@ -335,7 +411,6 @@
                     }
                 });
 
-                // Deteksi PELANGGARAN TABRAKAN (Antar Pemain)
                 if (orangTerdeteksi.length >= 2) {
                     for(let i=0; i<orangTerdeteksi.length; i++){
                         for(let j=i+1; j<orangTerdeteksi.length; j++){
@@ -344,36 +419,25 @@
                     }
                 }
 
-                // Deteksi HANDBALL (Bola bersinggungan di area lengan/tubuh pemain)
                 if (bolaTerdeteksi.length > 0 && orangTerdeteksi.length > 0) {
                     bolaTerdeteksi.forEach(bola => {
                         orangTerdeteksi.forEach(orang => {
                             if (cekTumpangTindih(bola, orang)) {
-                                // Jika tumpang tindih, cek apakah di area lengan/badan (Bukan kepala/kaki)
                                 const bolaTengahY = bola[1] + (bola[3] / 2);
-                                const bahuPemain = orang[1] + (orang[3] * 0.15); // Batas atas bahu (15%)
-                                const lututPemain = orang[1] + (orang[3] * 0.75); // Batas bawah lutut (75%)
-                                
-                                if (bolaTengahY > bahuPemain && bolaTengahY < lututPemain) {
-                                    potensiHandball = true;
-                                    
-                                    // Highlight kejadian
-                                    ctx.strokeStyle = "#eab308"; // Kuning
-                                    ctx.lineWidth = 4;
-                                    ctx.strokeRect(orang[0], orang[1], orang[2], orang[3]);
-                                }
+                                const bahuPemain = orang[1] + (orang[3] * 0.15); 
+                                const lututPemain = orang[1] + (orang[3] * 0.75); 
+                                if (bolaTengahY > bahuPemain && bolaTengahY < lututPemain) potensiHandball = true;
                             }
                         });
                     });
                 }
 
-                // TRIGGER OTOMATIS KE WASIT (Prioritas Logika)
-                if (potensiGoal) {
-                    triggerAIAutoReplay("⚠️ REVIEW AI: POTENSI GOAL");
-                } else if (potensiHandball) {
-                    triggerAIAutoReplay("✋ REVIEW AI: POTENSI HANDBALL");
-                } else if (potensiPelanggaran) {
-                    triggerAIAutoReplay("⚠️ REVIEW AI: POTENSI PELANGGARAN");
+                // AI Auto Trigger + Simpan Replay 1.5 Menit (Cooldown 15 Detik)
+                const now = Date.now();
+                if (now - lastAITrigger > 15000) {
+                    if (potensiGoal) { lastAITrigger = now; simpanKeGaleri("⚽ REVIEW: POTENSI GOAL"); }
+                    else if (potensiHandball) { lastAITrigger = now; simpanKeGaleri("✋ REVIEW: POTENSI HANDBALL"); }
+                    else if (potensiPelanggaran) { lastAITrigger = now; simpanKeGaleri("🛑 REVIEW: FOUL / TABRAKAN"); }
                 }
 
             } catch (err) {}
