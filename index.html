@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VAR FUTSAL PRO - HD, Auto-Delete & Audio Beep</title>
+    <title>VAR FUTSAL PRO - Smart Auto-Clip Check</title>
     
     <!-- SDK Firebase (V8) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -17,9 +17,25 @@
         * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
         body { background: #0f172a; color: #f8fafc; text-align: center; margin: 0; padding: 10px; }
         h1 { color: #38bdf8; font-size: 1.5rem; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 2px;}
-        .card { background: #1e293b; padding: 15px; border-radius: 12px; max-width: 600px; margin: 0 auto 15px auto; border: 1px solid #334155; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5); }
-        button { border: none; padding: 10px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; margin: 4px 2px; transition: 0.2s; font-size: 0.9rem; }
         
+        .card { background: #1e293b; padding: 15px; border-radius: 12px; max-width: 600px; margin: 0 auto 15px auto; border: 1px solid #334155; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5); }
+        
+        /* LAYOUT SPESIAL DESKTOP FULL-SCREEN */
+        .desktop-control-layout {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+            text-align: left;
+        }
+        @media (max-width: 900px) {
+            .desktop-control-layout { grid-template-columns: 1fr; }
+        }
+
+        .control-column { background: #1e293b; padding: 20px; border-radius: 12px; border: 1px solid #334155; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+
+        button { border: none; padding: 10px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; margin: 4px 2px; transition: 0.2s; font-size: 0.9rem; }
         select { background: #334155; color: white; padding: 10px; border-radius: 8px; border: 1px solid #475569; width: 100%; margin-bottom: 10px; font-weight: bold;}
         
         .btn-blue { background: #0284c7; color: white; width: 100%; } .btn-blue:hover { background: #0369a1; }
@@ -33,19 +49,25 @@
         .hidden { display: none !important; }
         
         /* Box Video Utama */
-        .video-box { position: relative; width: 100%; background: #000; border-radius: 8px; overflow: hidden; min-height: 250px; display: flex; align-items: center; justify-content: center; border: 3px solid #334155;}
+        .video-box { position: relative; width: 100%; background: #000; border-radius: 8px; overflow: hidden; min-height: 350px; display: flex; align-items: center; justify-content: center; border: 3px solid #334155;}
         video, img { width: 100%; height: auto; display: block; object-fit: cover; }
         canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
         
         /* Grid 3 Kamera */
-        .cams-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
-        .cam-thumb { background: #000; border: 2px solid #475569; border-radius: 6px; cursor: pointer; overflow: hidden; position: relative; min-height: 80px;}
+        .cams-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 15px; }
+        .cam-thumb { background: #000; border: 2px solid #475569; border-radius: 6px; cursor: pointer; overflow: hidden; position: relative; min-height: 90px;}
         .cam-thumb.active { border-color: #38bdf8; box-shadow: 0 0 10px rgba(56, 189, 248, 0.5); }
         .cam-label { position: absolute; top: 2px; left: 2px; background: rgba(0,0,0,0.7); font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; z-index: 5;}
 
+        /* Time Scrubber (Pengatur Detik Replay) */
+        .scrubber-container { margin-top: 15px; background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid #334155; display: none; }
+        .scrubber-container.active { display: block; }
+        .time-slider { width: 100%; accent-color: #38bdf8; cursor: pointer; }
+        .time-info { display: flex; justify-content: space-between; font-size: 0.85rem; color: #38bdf8; margin-top: 5px; font-weight: bold;}
+
         /* Bank Replay Tersimpan */
-        .replay-list { background: #0f172a; padding: 10px; border-radius: 8px; text-align: left; margin-top: 15px; border: 1px solid #334155;}
-        .replay-item { background: #1e293b; padding: 8px; margin-bottom: 5px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #10b981;}
+        .replay-list { background: #0f172a; padding: 12px; border-radius: 8px; text-align: left; margin-top: 15px; border: 1px solid #334155; max-height: 300px; overflow-y: auto;}
+        .replay-item { background: #1e293b; padding: 10px; margin-bottom: 8px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #10b981;}
         .replay-item.protected { border-left-color: #f59e0b; background: #262f45; }
         .replay-item button { padding: 6px 8px; font-size: 0.75rem; margin: 0 2px;}
 
@@ -58,13 +80,13 @@
 </head>
 <body>
 
-    <h1>⚽ VAR FUTSAL PRO (HD + AUDIO BEEP)</h1>
+    <h1>⚽ VAR FUTSAL PRO</h1>
 
     <!-- MENU UTAMA -->
     <div id="menu" class="card">
         <h3>Pilih Perangkat</h3>
         <button class="btn-blue" onclick="pilihPeran('kamera')">📱 Kamera Lapangan (HP)</button>
-        <button class="btn-blue" onclick="pilihPeran('operator')">🎛️ Ruang Kontrol & AI (Laptop)</button>
+        <button class="btn-blue" onclick="pilihPeran('operator')">🎛️ Ruang Kontrol & AI Desktop (Fullscreen)</button>
         <button class="btn-blue" onclick="pilihPeran('wasit')">📺 Monitor Wasit (Clean Broadcast)</button>
     </div>
 
@@ -85,53 +107,65 @@
     </div>
 
     <!-- PANEL KONTROL WASIT -->
-    <div id="panel-operator" class="card hidden" style="max-width: 800px;">
-        <h3>🎛️ RUANG KONTROL VAR</h3>
-        
-        <!-- Layar Utama -->
-        <div class="video-box" id="box-operator">
-            <div class="cam-label" style="background:#e11d48; top:10px; right:10px; font-size:0.9rem;" id="main-label">Layar Utama (Live)</div>
-            <img id="stream-main" src="" alt="Menunggu koneksi kamera...">
-            <!-- CANVAS MULTI-AI MARKER -->
-            <canvas id="canvas-ai"></canvas>
-        </div>
+    <div id="panel-operator" class="hidden" style="width: 100%;">
+        <div class="desktop-control-layout">
+            
+            <div class="control-column">
+                <h3 style="margin-top:0; color:#38bdf8;">📺 Live & Replay Monitor</h3>
+                <div class="video-box" id="box-operator">
+                    <div class="cam-label" style="background:#e11d48; top:10px; right:10px; font-size:0.9rem;" id="main-label">Layar Utama (Live)</div>
+                    <img id="stream-main" src="" alt="Menunggu koneksi kamera...">
+                    <canvas id="canvas-ai"></canvas>
+                </div>
 
-        <!-- 3 Layar CCTV -->
-        <div class="cams-grid">
-            <div class="cam-thumb active" id="thumb-1" onclick="setMainCam(1)">
-                <div class="cam-label">CAM 1</div><img id="stream-cam1" src="">
-            </div>
-            <div class="cam-thumb" id="thumb-2" onclick="setMainCam(2)">
-                <div class="cam-label">CAM 2</div><img id="stream-cam2" src="">
-            </div>
-            <div class="cam-thumb" id="thumb-3" onclick="setMainCam(3)">
-                <div class="cam-label">CAM 3</div><img id="stream-cam3" src="">
-            </div>
-        </div>
-        
-        <div style="margin-top: 10px;">
-            <div id="status-ai" class="status-badge">AI: Menyiapkan...</div>
-            <div class="status-badge" style="background:#10b981;">Audio Beep & HD Sync Active 🔊</div>
-        </div>
+                <div class="scrubber-container" id="scrubber-box">
+                    <div style="font-size:0.85rem; font-weight:bold; margin-bottom:5px; color:#cbd5e1;">⏱️ Geser Detik Replay (Scrubber):</div>
+                    <input type="range" id="replay-slider" class="time-slider" min="0" max="100" value="0" oninput="ubahDetikReplay(this.value)">
+                    <div class="time-info">
+                        <span id="lbl-current-time">0.0s</span>
+                        <span id="lbl-max-time">Total: 60.0s (1 Menit)</span>
+                    </div>
+                </div>
 
-        <!-- REPLAY LIST -->
-        <div class="replay-list">
-            <h4 style="margin:0 0 10px 0; color:#94a3b8;">📼 Bank Replay Otomatis (1 Menit)</h4>
-            <div id="replay-container">
-                <div style="color: #64748b; font-size: 0.8rem;">Menyiapkan klip otomatis pertama...</div>
+                <div class="cams-grid">
+                    <div class="cam-thumb active" id="thumb-1" onclick="setMainCam(1)">
+                        <div class="cam-label">CAM 1</div><img id="stream-cam1" src="">
+                    </div>
+                    <div class="cam-thumb" id="thumb-2" onclick="setMainCam(2)">
+                        <div class="cam-label">CAM 2</div><img id="stream-cam2" src="">
+                    </div>
+                    <div class="cam-thumb" id="thumb-3" onclick="setMainCam(3)">
+                        <div class="cam-label">CAM 3</div><img id="stream-cam3" src="">
+                    </div>
+                </div>
             </div>
-        </div>
 
-        <!-- DASHBOARD KEPUTUSAN -->
-        <div class="replay-list" style="margin-top: 10px;">
-            <h4 style="margin:0 0 10px 0; color:#94a3b8;">Kirim Keputusan Akhir ke Wasit</h4>
-            <div style="display: flex; flex-wrap: wrap; justify-content: space-between;">
-                <button class="btn-green" onclick="kirimKeputusanManual('⚽ DECISION: GOAL')">⚽ GOAL</button>
-                <button class="btn-red-half" onclick="kirimKeputusanManual('❌ DECISION: NO GOAL')">❌ NO GOAL</button>
-                <button class="btn-orange" onclick="kirimKeputusanManual('🛑 DECISION: FOUL')">🛑 FOUL</button>
-                <button class="btn-yellow" onclick="kirimKeputusanManual('✋ DECISION: HANDBALL')">✋ HANDBALL</button>
-                <button class="btn-gray" onclick="kirimKeputusanManual('✅ DECISION: PLAY ON')">✅ PLAY ON</button>
+            <div class="control-column" style="display: flex; flex-direction: column; justify-content: space-between;">
+                <div>
+                    <h3 style="margin-top:0; color:#38bdf8;">🎛️ Kontrol & Keputusan VAR</h3>
+                    <div id="status-ai" class="status-badge" style="margin-bottom:10px;">AI: Menyiapkan...</div>
+                    <div class="status-badge" style="background:#10b981; margin-bottom:10px;">Smart Camera Check Active ⚡</div>
+
+                    <div class="replay-list">
+                        <h4 style="margin:0 0 10px 0; color:#94a3b8;">📼 Bank Replay Otomatis (1 Menit)</h4>
+                        <div id="replay-container">
+                            <div style="color: #64748b; font-size: 0.8rem;">Menyiapkan klip otomatis pertama...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="replay-list" style="margin-top: 15px;">
+                    <h4 style="margin:0 0 10px 0; color:#94a3b8;">Kirim Keputusan Akhir ke Wasit</h4>
+                    <div style="display: flex; flex-wrap: wrap; justify-content: space-between;">
+                        <button class="btn-green" onclick="kirimKeputusanManual('⚽ DECISION: GOAL')">⚽ GOAL</button>
+                        <button class="btn-red-half" onclick="kirimKeputusanManual('❌ DECISION: NO GOAL')">❌ NO GOAL</button>
+                        <button class="btn-orange" onclick="kirimKeputusanManual('🛑 DECISION: FOUL')">🛑 FOUL</button>
+                        <button class="btn-yellow" onclick="kirimKeputusanManual('✋ DECISION: HANDBALL')">✋ HANDBALL</button>
+                        <button class="btn-gray" onclick="kirimKeputusanManual('✅ DECISION: PLAY ON')">✅ PLAY ON</button>
+                    </div>
+                </div>
             </div>
+
         </div>
     </div>
 
@@ -148,7 +182,6 @@
     </div>
 
 <script>
-    // --- KONFIGURASI FIREBASE ---
     const firebaseConfig = {
         apiKey: "AIzaSyDziA3_jPIQrBJvpAD2R25j4v55imMPB6g",
         authDomain: "var-ai-aldi.firebaseapp.com",
@@ -168,32 +201,28 @@
 
     const ONE_MIN_FRAMES = 600; 
     const camBuffers = { 1: [], 2: [], 3: [] }; 
+    const camActiveStatus = { 1: false, 2: false, 3: false }; // Melacak status hidup/matinya tiap kamera
     let savedVideoReplays = []; 
     let operatorPreviewInterval = null;
     let currentReviewId = null; 
+    let activeReviewFrames = []; 
     let lastAITrigger = 0;
     let lastAIDetectTime = 0;
     const AI_INTERVAL_MS = 100;
 
-    // --- FUNGSI AUDIO BEEP (WEB AUDIO API) ---
     function playBeep() {
         try {
             const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             const oscillator = audioCtx.createOscillator();
             const gainNode = audioCtx.createGain();
-
             oscillator.type = 'sine';
-            oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // Nada tinggi (A5) agar jelas terdengar
+            oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
             gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-
             oscillator.connect(gainNode);
             gainNode.connect(audioCtx.destination);
-
             oscillator.start();
-            oscillator.stop(audioCtx.currentTime + 0.2); // Berbunyi selama 0.2 detik
-        } catch (e) {
-            console.log("Audio Context tidak didukung atau diblokir browser.");
-        }
+            oscillator.stop(audioCtx.currentTime + 0.2);
+        } catch (e) {}
     }
 
     function pilihPeran(peran) {
@@ -217,12 +246,7 @@
         const mode = isFacingUser ? "user" : "environment";
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { 
-                    facingMode: mode, 
-                    width: { ideal: 1280 }, 
-                    height: { ideal: 720 },
-                    frameRate: { ideal: 30 }
-                }
+                video: { facingMode: mode, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } }
             });
             currentStream = stream;
             video.srcObject = stream;
@@ -234,24 +258,17 @@
             canvas.height = 360;
 
             let isSending = false;
-
             cameraInterval = setInterval(async () => {
                 if (video.readyState === video.HAVE_ENOUGH_DATA && !isSending) {
                     isSending = true;
                     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                     const frameData = canvas.toDataURL('image/jpeg', 0.7); 
-                    
                     try {
                         await db.ref(`var/cam_${camId}`).set(frameData);
-                    } catch (e) {
-                    } finally {
-                        isSending = false;
-                    }
+                    } catch (e) {} finally { isSending = false; }
                 }
             }, 50); 
-        } catch (err) { 
-            alert("Gagal Akses Kamera HD! Pastikan izin kamera diaktifkan."); 
-        }
+        } catch (err) { alert("Gagal Akses Kamera HD!"); }
     }
 
     function hentikanKameraLokal() {
@@ -280,6 +297,7 @@
             db.ref(`var/cam_${id}`).on('value', (snapshot) => {
                 const data = snapshot.val();
                 if (data) {
+                    camActiveStatus[id] = true; // Kamera aktif
                     const thumbImg = document.getElementById(`stream-cam${id}`);
                     if(thumbImg) thumbImg.src = data;
 
@@ -291,6 +309,7 @@
                     camBuffers[id].push(data);
                     if (camBuffers[id].length > ONE_MIN_FRAMES) camBuffers[id].shift(); 
                 } else {
+                    camActiveStatus[id] = false; // Kamera mati / kosong
                     const thumbImg = document.getElementById(`stream-cam${id}`);
                     if(thumbImg) thumbImg.removeAttribute('src');
                     if (activeCam === id && !operatorPreviewInterval) {
@@ -312,6 +331,7 @@
             operatorPreviewInterval = null;
             document.getElementById('main-label').innerText = "Layar Utama (Live)";
             document.getElementById('main-label').style.background = "#e11d48";
+            document.getElementById('scrubber-box').classList.remove('active');
         }
         
         const canvas = document.getElementById('canvas-ai');
@@ -321,6 +341,13 @@
 
     function mulaiAutoSatuMenitTimer() {
         setInterval(() => {
+            // CEK APAKAH KAMERA YANG SEDANG DIPILIH AKTIF?
+            // Jika kamera mati atau tidak ada stream, batalkan penyimpanan otomatis!
+            if (!camActiveStatus[activeCam]) {
+                console.log("[Auto-Clip Skip] Kamera aktif sedang mati, klip otomatis dibatalkan.");
+                return;
+            }
+
             if (camBuffers[activeCam].length >= 30) {
                 simpanKlipOtomatis(`Klip Otomatis (${new Date().toLocaleTimeString()})`, false);
             }
@@ -328,7 +355,8 @@
     }
 
     function simpanKlipOtomatis(judul, playSound = true) {
-        if (camBuffers[activeCam].length < 10) return;
+        // Pengecekan ganda: Pastikan kamera benar-benar aktif sebelum menyimpan
+        if (!camActiveStatus[activeCam] || camBuffers[activeCam].length < 10) return;
         
         const idUnik = Date.now();
         const frameCopy = [...camBuffers[activeCam]]; 
@@ -342,11 +370,7 @@
         });
         
         renderGaleri();
-
-        // Bunyikan Beep Audio jika AI mendeteksi kejadian penting
-        if (playSound) {
-            playBeep();
-        }
+        if (playSound) playBeep();
 
         setTimeout(() => {
             cekDanHapusKlip(idUnik);
@@ -371,6 +395,7 @@
         if (!replay || !replay.frames || replay.frames.length === 0) return;
 
         currentReviewId = replayId; 
+        activeReviewFrames = replay.frames;
         renderGaleri();
 
         if (operatorPreviewInterval) clearInterval(operatorPreviewInterval);
@@ -378,13 +403,34 @@
         document.getElementById('main-label').innerText = `Sedang Review (${replay.title})`;
         document.getElementById('main-label').style.background = "#f59e0b"; 
 
+        const slider = document.getElementById('replay-slider');
+        slider.max = replay.frames.length - 1;
+        slider.value = 0;
+        document.getElementById('scrubber-box').classList.add('active');
+        document.getElementById('lbl-max-time').innerText = `Total: ${(replay.frames.length / 10).toFixed(1)}s`;
+
         let i = 0;
         const mainImg = document.getElementById('stream-main');
         operatorPreviewInterval = setInterval(() => {
+            if (i >= replay.frames.length) i = 0;
             mainImg.src = replay.frames[i];
+            slider.value = i;
+            document.getElementById('lbl-current-time').innerText = `${(i / 10).toFixed(1)}s`;
             i++;
-            if (i >= replay.frames.length) i = 0; 
-        }, 80);
+        }, 100);
+    }
+
+    function ubahDetikReplay(indexFrame) {
+        if (!activeReviewFrames || activeReviewFrames.length === 0) return;
+        
+        if (operatorPreviewInterval) {
+            clearInterval(operatorPreviewInterval);
+            operatorPreviewInterval = null;
+        }
+
+        const idx = parseInt(indexFrame);
+        document.getElementById('stream-main').src = activeReviewFrames[idx];
+        document.getElementById('lbl-current-time').innerText = `${(idx / 10).toFixed(1)}s`;
     }
 
     function kembaliKeLive() {
@@ -393,6 +439,8 @@
             operatorPreviewInterval = null;
         }
         currentReviewId = null; 
+        activeReviewFrames = [];
+        document.getElementById('scrubber-box').classList.remove('active');
         renderGaleri();
         document.getElementById('main-label').innerText = "Layar Utama (Live)";
         document.getElementById('main-label').style.background = "#e11d48";
@@ -403,7 +451,7 @@
         container.innerHTML = "";
         
         if (savedVideoReplays.length === 0) {
-            container.innerHTML = `<div style="color: #64748b; font-size: 0.8rem;">Belum ada klip tersimpan. Klip otomatis masuk tiap 1 menit.</div>`;
+            container.innerHTML = `<div style="color: #64748b; font-size: 0.8rem;">Belum ada klip tersimpan. Klip otomatis masuk tiap 1 menit (hanya saat kamera aktif).</div>`;
             return;
         }
 
@@ -485,7 +533,7 @@
                     imgElement.src = data.frames[i];
                     i++;
                     if (i >= data.frames.length) i = 0; 
-                }, 80); 
+                }, 100); 
             }
         });
     }
@@ -496,7 +544,7 @@
         try {
             if (!modelAI) modelAI = await cocoSsd.load();
             isAIActive = true;
-            statusAI.innerText = "Multi-AI + Audio Beep Aktif 🟢";
+            statusAI.innerText = "Multi-AI Smart Check Aktif 🟢";
             requestAnimationFrame(jalankanDeteksiAI); 
         } catch (error) { statusAI.innerText = "AI: Error ❌"; }
     }
@@ -515,6 +563,15 @@
             return;
         }
         lastAIDetectTime = timestamp;
+
+        // JIKA KAMERA MATI, JANGAN LAKUKAN SCAN AI / TRIGGER REPLAY OTOMATIS
+        if (!camActiveStatus[activeCam]) {
+            const canvas = document.getElementById('canvas-ai');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            requestAnimationFrame(jalankanDeteksiAI);
+            return;
+        }
 
         const img = document.getElementById('stream-main');
         const canvas = document.getElementById('canvas-ai');
