@@ -49,6 +49,25 @@
         
         .video-box { position: relative; width: 100%; background: #000; border-radius: 8px; overflow: hidden; min-height: 350px; display: flex; align-items: center; justify-content: center; border: 3px solid #334155;}
         
+        /* Pengaturan Khusus Kamera HP Landscape */
+        .video-box-hp { 
+            position: relative; 
+            width: 100%; 
+            background: #000; 
+            border-radius: 8px; 
+            overflow: hidden; 
+            aspect-ratio: 16 / 9; /* Memaksa rasio landscape */
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            border: 3px solid #334155;
+        }
+        .video-box-hp video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
         .zoom-wrapper { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; cursor: grab; }
         .zoom-wrapper:active { cursor: grabbing; }
         
@@ -93,13 +112,15 @@
 
     <!-- PANEL KAMERA -->
     <div id="panel-kamera" class="card hidden">
-        <h3>📱 Setup Kamera</h3>
+        <h3>📱 Setup Kamera (Mode Landscape)</h3>
         <select id="cam-id">
             <option value="1">Kamera 1 (Kiri Lapangan)</option>
             <option value="2">Kamera 2 (Tengah/Wasit)</option>
             <option value="3">Kamera 3 (Kanan Lapangan)</option>
         </select>
-        <div class="video-box"><video id="webcam" autoplay playsinline muted></video></div>
+        <!-- Kotak video dengan rasio landscape 16:9 -->
+        <div class="video-box-hp"><video id="webcam" autoplay playsinline muted></video></div>
+        <p style="font-size: 0.75rem; color: #94a3b8; margin-top: 6px;">💡 *Putar HP Anda ke posisi mendatar (Landscape) untuk hasil terbaik.</p>
         <br>
         <button class="btn-green" style="width:100%; margin-bottom: 5px;" onclick="mulaiKamera()">🟢 Mulai Live Stream</button>
         <button class="btn-red" style="margin-bottom: 5px;" onclick="hentikanKamera()">⏹️ Matikan Stream</button>
@@ -167,9 +188,15 @@
                     <div class="status-badge" style="background:#10b981; margin-bottom:10px;">Controlled Send Active ⚡</div>
 
                     <div class="replay-list">
-                        <h4 style="margin:0 0 10px 0; color:#94a3b8;">📼 Bank Replay (Otomatis per 1 Menit & AI)</h4>
+                        <h4 style="margin:0 0 5px 0; color:#94a3b8;">📼 Bank Replay (Otomatis & AI)</h4>
+                        
+                        <!-- Indikator Live Countdown Klip Otomatis -->
+                        <div id="teks-auto-save" style="font-size:0.85rem; color:#10b981; font-weight:bold; margin-bottom:10px; background: #0f172a; padding: 4px; border-radius: 4px;">
+                            ⏳ Menunggu Kamera Aktif...
+                        </div>
+
                         <div id="replay-container">
-                            <div style="color: #64748b; font-size: 0.8rem;">Menyiapkan klip otomatis...</div>
+                            <div style="color: #64748b; font-size: 0.8rem;">Belum ada klip tersimpan.</div>
                         </div>
                     </div>
                 </div>
@@ -219,9 +246,8 @@
     let modelAI = null, isAIActive = false;
     let activeCam = 1; 
 
-    // Kamera merekam setiap 50ms (20 Frame per Detik)
     const FPS = 20; 
-    const MAX_FRAMES = 600; // Menyimpan 30 detik (600 frame / 20fps)
+    const MAX_FRAMES = 600; 
     
     const camBuffers = { 1: [], 2: [], 3: [] }; 
     const camActiveStatus = { 1: false, 2: false, 3: false }; 
@@ -232,7 +258,7 @@
     
     let isPaused = false;
     let currentFrameIndex = 0;
-    let isCrucialPlay = false; // Flag untuk Jendela 3 Detik
+    let isCrucialPlay = false; 
     let crucialEndIndex = 0;
     
     let zoomScale = 1;
@@ -243,12 +269,11 @@
     let lastAIDetectTime = 0;
     const AI_INTERVAL_MS = 100;
 
-    // === FUNGSI TEXT TO SPEECH (VOICE ALERT) ===
     function bicaraAI(teks) {
         if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel(); // hentikan suara sebelumnya
+            window.speechSynthesis.cancel(); 
             const suara = new SpeechSynthesisUtterance(teks);
-            suara.lang = 'id-ID'; // Bahasa Indonesia
+            suara.lang = 'id-ID'; 
             suara.rate = 1.2;
             suara.pitch = 1.1;
             window.speechSynthesis.speak(suara);
@@ -271,7 +296,6 @@
     }
 
     function pilihPeran(peran) {
-        // Unlock Audio Context untuk Voice AI di browser
         if ('speechSynthesis' in window) {
             let msg = new SpeechSynthesisUtterance('');
             window.speechSynthesis.speak(msg);
@@ -286,7 +310,7 @@
         if (peran === 'operator') { 
             bacaMultiStream(); 
             mulaiAutoAI(); 
-            mulaiAutoSatuMenitTimer(); // MENGAKTIFKAN KEMBALI TIMER 1 MENIT
+            mulaiAutoSatuMenitTimer(); 
             inisialisasiZoomPan();
         }
         else if (peran === 'wasit') { 
@@ -294,15 +318,33 @@
         }
     }
 
-    // === FUNGSI PENYIMPANAN OTOMATIS TIAP 1 MENIT ===
+    let timerAutoSave = 30;
+    let autoSaveInterval = null;
+
     function mulaiAutoSatuMenitTimer() {
-        setInterval(() => {
-            // Hanya simpan jika kamera aktif dan ada minimal 30 frame tersimpan
-            if (!camActiveStatus[activeCam]) return;
-            if (camBuffers[activeCam].length >= 30) {
-                simpanKlipOtomatis(`Klip Otomatis (${new Date().toLocaleTimeString()})`, false, -1);
+        if (autoSaveInterval) clearInterval(autoSaveInterval);
+        timerAutoSave = 30;
+        
+        autoSaveInterval = setInterval(() => {
+            const labelTimer = document.getElementById('teks-auto-save');
+            
+            if (!camActiveStatus[activeCam] || camBuffers[activeCam].length < 10) {
+                if (labelTimer) labelTimer.innerText = "⏳ Menunggu Kamera Aktif...";
+                timerAutoSave = 30; 
+                return;
             }
-        }, 60000); // 60.000 ms = 1 Menit
+
+            timerAutoSave--; 
+            
+            if (labelTimer) {
+                labelTimer.innerText = `⏱️ Menyimpan klip otomatis dalam: ${timerAutoSave} detik`;
+            }
+
+            if (timerAutoSave <= 0) {
+                simpanKlipOtomatis(`Klip 30 Detik (${new Date().toLocaleTimeString()})`, false, -1);
+                timerAutoSave = 30; 
+            }
+        }, 1000); 
     }
 
     function inisialisasiZoomPan() {
@@ -359,19 +401,24 @@
         
         const mode = isFacingUser ? "user" : "environment";
         try {
+            // Memaksa resolusi HD landscape (1280x720) agar tampilan kamera di HP otomatis mendatar
             const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: mode, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } }
+                video: { 
+                    facingMode: mode, 
+                    width: { ideal: 1280 }, 
+                    height: { ideal: 720 }, 
+                    frameRate: { ideal: 30 } 
+                }
             });
             currentStream = stream;
             video.srcObject = stream;
-            if (statusCam) statusCam.innerText = `Status: Live Stream HD (Cam ${camId}) 🔴`;
+            if (statusCam) statusCam.innerText = `Status: Live Stream Landscape (Cam ${camId}) 🔴`;
 
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
             canvas.width = 640; canvas.height = 360;
 
             let isSending = false;
-            // Capture setiap 50ms = 20 FPS
             cameraInterval = setInterval(async () => {
                 if (video.readyState === video.HAVE_ENOUGH_DATA && !isSending) {
                     isSending = true;
@@ -380,7 +427,7 @@
                     try { await db.ref(`var/cam_${camId}`).set(frameData); } catch (e) {} finally { isSending = false; }
                 }
             }, 50); 
-        } catch (err) { alert("Gagal Akses Kamera HD!"); }
+        } catch (err) { alert("Gagal Akses Kamera HD! Pastikan izin kamera diberikan."); }
     }
 
     function hentikanKameraLokal() {
@@ -433,14 +480,12 @@
         canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
     }
 
-    // Fungsi menyimpan klip beserta waktu kejadian
     function simpanKlipOtomatis(judul, playSound = true, highlightIndex = -1) {
         if (!camActiveStatus[activeCam] || camBuffers[activeCam].length < 10) return;
         
         const idUnik = Date.now();
         const frameCopy = [...camBuffers[activeCam]]; 
         
-        // Buat Jendela 3 Detik jika highlightIndex valid, jika tidak set 0
         const startHighlight = highlightIndex !== -1 ? Math.max(0, highlightIndex - FPS) : 0;
         const endHighlight = highlightIndex !== -1 ? Math.min(frameCopy.length - 1, highlightIndex + FPS) : 0;
         
@@ -449,7 +494,7 @@
             title: judul, 
             cam: activeCam, 
             frames: frameCopy, 
-            highlightIndex: highlightIndex, // Menyimpan -1 jika ini klip 1-menit reguler
+            highlightIndex: highlightIndex, 
             startHighlight: startHighlight,
             endHighlight: endHighlight,
             createdAt: Date.now() 
@@ -465,7 +510,7 @@
         const targetKlip = savedVideoReplays.find(item => item.id === idUnik);
         if (!targetKlip) return;
         if (currentReviewId === idUnik) {
-            setTimeout(() => cekDanHapusKlip(idUnik), 60000);
+            setTimeout(() => cekDanHapusKlip(idUnik), 60000); 
             return;
         }
         savedVideoReplays = savedVideoReplays.filter(item => item.id !== idUnik);
@@ -491,7 +536,6 @@
             let highlightHTML = "";
             let btn3DetikHTML = "";
             
-            // Jika ini klip deteksi AI (highlightIndex bukan -1), tampilkan penanda detik
             if (replay.highlightIndex !== -1) {
                 const detikPuncak = (replay.highlightIndex / FPS).toFixed(1);
                 const detikStart = (replay.startHighlight / FPS).toFixed(1);
@@ -517,19 +561,17 @@
         });
     }
 
-    // Fungsi Super Pintar: Memutar tepat 3 detik area kejadian (Slow Motion)
     function putarKejadian3Detik(replayId) {
         const replay = savedVideoReplays.find(r => r.id === replayId);
         if (!replay || replay.highlightIndex === -1) return;
 
-        previewReplayLokal(replayId); // Load replay ke layar
+        previewReplayLokal(replayId); 
         
         setTimeout(() => {
             isPaused = false;
-            isCrucialPlay = true; // Aktifkan mode Jendela 3 Detik
+            isCrucialPlay = true; 
             crucialEndIndex = replay.endHighlight;
             
-            // Lompat ke 1 detik sebelum kejadian
             currentFrameIndex = replay.startHighlight;
             const slider = document.getElementById('replay-slider');
             if(slider) slider.value = currentFrameIndex;
@@ -549,7 +591,7 @@
         currentReviewId = replayId; 
         activeReviewFrames = replay.frames;
         isPaused = false;
-        isCrucialPlay = false; // Reset mode krusial
+        isCrucialPlay = false; 
         
         const btnPause = document.getElementById('btn-pause-play');
         if (btnPause) { btnPause.innerText = "⏸️ Pause"; btnPause.style.background = "#eab308"; }
@@ -568,12 +610,10 @@
         currentFrameIndex = 0;
         tampilkanFrameReviewLokal(currentFrameIndex); 
 
-        // Playback Slow Motion (Diputar tiap 100ms padahal direkam tiap 50ms)
         operatorPreviewInterval = setInterval(() => {
             if (!isPaused) {
                 currentFrameIndex++;
                 
-                // Cek jika sedang mode putar krusial 3 detik
                 if (isCrucialPlay && currentFrameIndex >= crucialEndIndex) {
                     isPaused = true;
                     isCrucialPlay = false;
@@ -597,7 +637,7 @@
     function ubahDetikReplay(indexFrame) {
         if (!activeReviewFrames || activeReviewFrames.length === 0) return;
         isPaused = true;
-        isCrucialPlay = false; // Batalkan mode krusial jika digeser manual
+        isCrucialPlay = false; 
         
         const btn = document.getElementById('btn-pause-play');
         if (btn) { btn.innerText = "▶️ Play"; btn.style.background = "#16a34a"; }
@@ -609,7 +649,7 @@
     function togglePausePlay() {
         if (!currentReviewId) return;
         isPaused = !isPaused;
-        isCrucialPlay = false; // Batalkan mode otomatis krusial
+        isCrucialPlay = false; 
         
         const btn = document.getElementById('btn-pause-play');
         if (isPaused) { btn.innerText = "▶️ Play"; btn.style.background = "#16a34a"; } 
