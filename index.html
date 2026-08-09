@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VAR FUTSAL PRO - Auto 1 Min Clip & Protected Review</title>
+    <title>VAR FUTSAL PRO - Auto-Delete on Decision</title>
     
     <!-- SDK Firebase (V8) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -29,7 +29,6 @@
         .btn-orange { background: #d97706; color: white; width: 31%; } .btn-orange:hover { background: #b45309; }
         .btn-yellow { background: #eab308; color: black; width: 48%; } .btn-yellow:hover { background: #ca8a04; color: white; }
         .btn-gray { background: #475569; color: white; width: 48%; } .btn-gray:hover { background: #334155; }
-        .btn-purple { background: #7c3aed; color: white; } .btn-purple:hover { background: #6d28d9; }
         
         .hidden { display: none !important; }
         
@@ -59,7 +58,7 @@
 </head>
 <body>
 
-    <h1>⚽ VAR FUTSAL PRO (AUTO 1-MIN CLIP)</h1>
+    <h1>⚽ VAR FUTSAL PRO</h1>
 
     <!-- MENU UTAMA -->
     <div id="menu" class="card">
@@ -93,7 +92,7 @@
         <div class="video-box" id="box-operator">
             <div class="cam-label" style="background:#e11d48; top:10px; right:10px; font-size:0.9rem;" id="main-label">Layar Utama (Live)</div>
             <img id="stream-main" src="" alt="Menunggu koneksi kamera...">
-            <!-- CANVAS PENANDA TITIK DETAIL AI -->
+            <!-- CANVAS MULTI-AI MARKER -->
             <canvas id="canvas-ai"></canvas>
         </div>
 
@@ -112,7 +111,7 @@
         
         <div style="margin-top: 10px;">
             <div id="status-ai" class="status-badge">AI: Menyiapkan...</div>
-            <div class="status-badge" style="background:#10b981;">Auto-Clip 1 Min (Hapus 5 Min) 🕒</div>
+            <div class="status-badge" style="background:#10b981;">Auto-Delete on Decision ⚡</div>
         </div>
 
         <!-- REPLAY LIST -->
@@ -167,13 +166,14 @@
     let modelAI = null, isAIActive = false;
     let activeCam = 1; 
 
-    // Buffer 1 Menit per klip (600 frame pada 10 FPS)
     const ONE_MIN_FRAMES = 600; 
     const camBuffers = { 1: [], 2: [], 3: [] }; 
     let savedVideoReplays = []; 
-    let lastAIDetectTime = 0;
     let operatorPreviewInterval = null;
-    let currentReviewId = null; // Menyimpan ID klip yang sedang direview/dikirim ke wasit agar tidak terhapus otomatis
+    let currentReviewId = null; 
+    let lastAITrigger = 0;
+    let lastAIDetectTime = 0;
+    const AI_INTERVAL_MS = 80;
 
     function pilihPeran(peran) {
         document.getElementById('menu').classList.add('hidden');
@@ -181,7 +181,7 @@
         if (peran === 'operator') { 
             bacaMultiStream(); 
             mulaiAutoAI(); 
-            mulaiAutoSatuMenitTimer(); // Jalankan timer simpan otomatis setiap 1 menit
+            mulaiAutoSatuMenitTimer(); 
         }
         else if (peran === 'wasit') { bacaStreamReplay(); }
     }
@@ -213,7 +213,7 @@
                     const frameData = canvas.toDataURL('image/jpeg', 0.2); 
                     try { await db.ref(`var/cam_${camId}`).set(frameData); } catch (e) {} finally { isUploading = false; }
                 }
-            }, 100); 
+            }, 60); 
         } catch (err) { alert("Gagal Akses Kamera!"); }
     }
 
@@ -249,7 +249,6 @@
                         document.getElementById('stream-main').src = data;
                     }
                     camBuffers[id].push(data);
-                    // Pertahankan buffer cukup untuk 1 menit terakhir
                     if (camBuffers[id].length > ONE_MIN_FRAMES) camBuffers[id].shift(); 
                 } else {
                     document.getElementById(`stream-cam${id}`).removeAttribute('src');
@@ -276,13 +275,12 @@
         ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
 
-    // --- AUTO SIMPAN KELOMPOK 1 MENIT SETIAP 60 DETIK ---
     function mulaiAutoSatuMenitTimer() {
         setInterval(() => {
             if (camBuffers[activeCam].length >= 30) {
                 simpanKlipOtomatis(`Klip Otomatis (${new Date().toLocaleTimeString()})`);
             }
-        }, 60000); // Setiap 1 Menit
+        }, 60000); 
     }
 
     function simpanKlipOtomatis(judul) {
@@ -291,7 +289,6 @@
         const idUnik = Date.now();
         const frameCopy = [...camBuffers[activeCam]]; 
         
-        // Simpan ke bank replay dengan durasi kedaluwarsa 5 menit (300.000 ms)
         savedVideoReplays.push({ 
             id: idUnik, 
             title: judul, 
@@ -302,41 +299,35 @@
         
         renderGaleri();
 
-        // Pengecekan Hapus Otomatis Setiap 5 Menit (Kecuali sedang direview atau dikirim ke wasit)
         setTimeout(() => {
             cekDanHapusKlip(idUnik);
-        }, 300000); // 5 Menit
+        }, 300000); // 5 Menit default jika tidak ada keputusan
     }
 
     function cekDanHapusKlip(idUnik) {
         const targetKlip = savedVideoReplays.find(item => item.id === idUnik);
         if (!targetKlip) return;
 
-        // Jika klip ini sedang aktif di-review operator atau sedang dikirim ke wasit, JANGAN DIHAPUS
         if (currentReviewId === idUnik) {
-            console.log(`[Proteksi] Klip ${idUnik} sedang ditinjau/dikirim ke wasit, penundaan penghapusan.`);
-            // Coba cek lagi nanti setelah 1 menit berikutnya
             setTimeout(() => cekDanHapusKlip(idUnik), 60000);
             return;
         }
 
-        // Jika aman, hapus otomatis
         savedVideoReplays = savedVideoReplays.filter(item => item.id !== idUnik);
         renderGaleri();
-        console.log(`[Auto-Clean 5 Min] Klip ${idUnik} telah dihapus otomatis.`);
     }
 
     function previewReplayLokal(replayId) {
         const replay = savedVideoReplays.find(r => r.id === replayId);
         if (!replay || !replay.frames || replay.frames.length === 0) return;
 
-        currentReviewId = replayId; // Lindungi klip dari penghapusan otomatis
+        currentReviewId = replayId; 
         renderGaleri();
 
         if (operatorPreviewInterval) clearInterval(operatorPreviewInterval);
 
         document.getElementById('main-label').innerText = `Sedang Review (${replay.title})`;
-        document.getElementById('main-label').style.background = "#f59e0b"; // Warna kuning proteksi
+        document.getElementById('main-label').style.background = "#f59e0b"; 
 
         let i = 0;
         const mainImg = document.getElementById('stream-main');
@@ -352,7 +343,7 @@
             clearInterval(operatorPreviewInterval);
             operatorPreviewInterval = null;
         }
-        currentReviewId = null; // Lepaskan proteksi
+        currentReviewId = null; 
         renderGaleri();
         document.getElementById('main-label').innerText = "Layar Utama (Live)";
         document.getElementById('main-label').style.background = "#e11d48";
@@ -374,7 +365,7 @@
             div.innerHTML = `
                 <div>
                     <strong>${replay.title}</strong><br>
-                    <small style="color:${isProtected ? '#f59e0b' : '#38bdf8'};">Cam ${replay.cam} | 1 Menit ${isProtected ? '🔒 (Sedang Direview)' : ''}</small>
+                    <small style="color:${isProtected ? '#f59e0b' : '#38bdf8'};">Cam ${replay.cam} | 1 Menit ${isProtected ? '🔒 (Direview)' : ''}</small>
                 </div>
                 <div>
                     <button class="btn-yellow" onclick="previewReplayLokal(${replay.id})">▶️ Lihat</button>
@@ -389,16 +380,28 @@
     function kirimReplayTersimpan(replayId) {
         const replay = savedVideoReplays.find(r => r.id === replayId);
         if (replay) {
-            currentReviewId = replayId; // Lindungi klip yang dikirim ke wasit agar tidak terhapus otomatis
+            currentReviewId = replayId; 
             renderGaleri();
             kirimReplayKeWasit(replay.frames, `REVIEW: ${replay.title}`);
-            alert("Klip Replay berhasil dikirim ke Monitor Wasit (Diproteksi dari auto-delete)!");
+            alert("Klip Replay berhasil dikirim ke Monitor Wasit!");
         }
     }
 
+    // --- FITUR BARU: HAPUS KLIP OTOMATIS SAAT KEPUTUSAN AKHIR DIAMBIL ---
     function kirimKeputusanManual(keputusanTeks) {
+        // 1. Kirim keputusan ke wasit
         db.ref('var/replay_wasit/decision').set(keputusanTeks);
-        alert(`Keputusan [${keputusanTeks}] dikirim ke Wasit!`);
+
+        // 2. Jika sedang ada klip yang di-review/dikirim, HAPUS SEKARANG SECARA OTOMATIS
+        if (currentReviewId) {
+            savedVideoReplays = savedVideoReplays.filter(item => item.id !== currentReviewId);
+            currentReviewId = null;
+            renderGaleri();
+            kembaliKeLive();
+            console.log("[Auto-Delete] Klip yang direview telah dihapus otomatis setelah keputusan diambil.");
+        }
+
+        alert(`Keputusan [${keputusanTeks}] dikirim dan klip yang direview telah dihapus otomatis!`);
     }
 
     function kirimReplayKeWasit(framesArray, teksKeputusan) {
@@ -448,15 +451,21 @@
         try {
             if (!modelAI) modelAI = await cocoSsd.load();
             isAIActive = true;
-            statusAI.innerText = "AI: Pelacakan Detail Aktif 🟢";
+            statusAI.innerText = "Multi-AI Ultra Responsive Aktif 🟢";
             requestAnimationFrame(jalankanDeteksiAI); 
         } catch (error) { statusAI.innerText = "AI: Error ❌"; }
+    }
+
+    function cekTumpangTindih(box1, box2) {
+        const x_overlap = Math.max(0, Math.min(box1[0] + box1[2], box2[0] + box2[2]) - Math.max(box1[0], box2[0]));
+        const y_overlap = Math.max(0, Math.min(box1[1] + box1[3], box2[1] + box2[3]) - Math.max(box1[1], box2[1]));
+        return (x_overlap * y_overlap > (box1[2] * box1[3] * 0.12)); 
     }
 
     async function jalankanDeteksiAI(timestamp) {
         if (!isAIActive) return;
 
-        if (timestamp - lastAIDetectTime < 250) {
+        if (timestamp - lastAIDetectTime < AI_INTERVAL_MS) {
             requestAnimationFrame(jalankanDeteksiAI);
             return;
         }
@@ -480,28 +489,89 @@
                 const predictions = await modelAI.detect(img);
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+                let orangTerdeteksi = [], bolaTerdeteksi = [];
+                let potensiGoal = false, potensiPelanggaran = false, potensiHandball = false;
+
+                const scaleX = canvas.width / img.naturalWidth;
+                const scaleY = canvas.height / img.naturalHeight;
+
                 predictions.forEach(pred => {
-                    if (pred.score > 0.4) {
+                    if (pred.score > 0.35) {
                         const [x, y, w, h] = pred.bbox;
                         const scaledBox = [x * scaleX, y * scaleY, w * scaleX, h * scaleY];
-                        const scaleX = canvas.width / img.naturalWidth;
-                        const scaleY = canvas.height / img.naturalHeight;
-                        const centerX = (x * scaleX) + ((w * scaleX) / 2);
-                        const centerY = (y * scaleY) + ((h * scaleY) / 2);
+                        const centerX = scaledBox[0] + (scaledBox[2] / 2);
+                        const centerY = scaledBox[1] + (scaledBox[3] / 2);
 
                         if (pred.class === 'person') {
+                            orangTerdeteksi.push(scaledBox);
                             ctx.fillStyle = "#38bdf8";
                             ctx.beginPath();
-                            ctx.arc(centerX, (y * scaleY) + 5, 4, 0, 2 * Math.PI);
+                            ctx.arc(centerX, scaledBox[1] + 5, 4, 0, 2 * Math.PI);
                             ctx.fill();
                         } else if (pred.class === 'sports ball') {
+                            bolaTerdeteksi.push(scaledBox);
                             ctx.fillStyle = "#facc15";
                             ctx.beginPath();
                             ctx.arc(centerX, centerY, 6, 0, 2 * Math.PI);
                             ctx.fill();
+
+                            const centerBola = scaledBox[0] + (scaledBox[2] / 2);
+                            if (centerBola < (canvas.width * 0.08) || centerBola > (canvas.width * 0.92)) {
+                                potensiGoal = true;
+                            }
                         }
                     }
                 });
+
+                if (orangTerdeteksi.length >= 2) {
+                    for(let i=0; i<orangTerdeteksi.length; i++){
+                        for(let j=i+1; j<orangTerdeteksi.length; j++){
+                            if(cekTumpangTindih(orangTerdeteksi[i], orangTerdeteksi[j])) {
+                                potensiPelanggaran = true;
+                                const midX = (orangTerdeteksi[i][0] + orangTerdeteksi[j][0]) / 2;
+                                const midY = (orangTerdeteksi[i][1] + orangTerdeteksi[j][1]) / 2;
+                                ctx.fillStyle = "#ef4444";
+                                ctx.beginPath();
+                                ctx.arc(midX, midY, 9, 0, 2 * Math.PI);
+                                ctx.fill();
+                            }
+                        }
+                    }
+                }
+
+                if (bolaTerdeteksi.length > 0 && orangTerdeteksi.length > 0) {
+                    bolaTerdeteksi.forEach(bola => {
+                        orangTerdeteksi.forEach(orang => {
+                            if (cekTumpangTindih(bola, orang)) {
+                                const bolaTengahY = bola[1] + (bola[3] / 2);
+                                const bahuPemain = orang[1] + (orang[3] * 0.15); 
+                                const lututPemain = orang[1] + (orang[3] * 0.75); 
+                                if (bolaTengahY > bahuPemain && bolaTengahY < lututPemain) {
+                                    potensiHandball = true;
+                                    ctx.fillStyle = "#f97316";
+                                    ctx.beginPath();
+                                    ctx.arc(bola[0], bola[1], 8, 0, 2 * Math.PI);
+                                    ctx.fill();
+                                }
+                            }
+                        });
+                    });
+                }
+
+                const now = Date.now();
+                if (now - lastAITrigger > 12000) { 
+                    if (potensiGoal) { 
+                        lastAITrigger = now; 
+                        simpanKlipOtomatis("⚽ AI REVIEW: POTENSI GOAL"); 
+                    } else if (potensiHandball) { 
+                        lastAITrigger = now; 
+                        simpanKlipOtomatis("✋ AI REVIEW: POTENSI HANDBALL"); 
+                    } else if (potensiPelanggaran) { 
+                        lastAITrigger = now; 
+                        simpanKlipOtomatis("🛑 AI REVIEW: FOUL / KONTAK FISIK"); 
+                    }
+                }
+
             } catch (err) {}
         }
         requestAnimationFrame(jalankanDeteksiAI);
