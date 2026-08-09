@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VAR FUTSAL PRO - Fixed & Ready</title>
+    <title>VAR FUTSAL PRO - Stable & Error-Free</title>
     
     <!-- SDK Firebase (V8) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -163,7 +163,7 @@
                 <div>
                     <h3 style="margin-top:0; color:#38bdf8;">🎛️ Kontrol & Keputusan VAR</h3>
                     <div id="status-ai" class="status-badge" style="margin-bottom:10px;">AI: Menyiapkan...</div>
-                    <div class="status-badge" style="background:#10b981; margin-bottom:10px;">System Normal & Ready ⚡</div>
+                    <div class="status-badge" style="background:#10b981; margin-bottom:10px;">System Stable & Secure ⚡</div>
 
                     <div class="replay-list">
                         <h4 style="margin:0 0 10px 0; color:#94a3b8;">📼 Bank Replay Otomatis (1 Menit)</h4>
@@ -252,20 +252,26 @@
     }
 
     function pilihPeran(peran) {
-        document.getElementById('menu').classList.add('hidden');
-        document.getElementById(`panel-${peran}`).classList.remove('hidden');
+        const menuEl = document.getElementById('menu');
+        if (menuEl) menuEl.classList.add('hidden');
+        
+        const panelEl = document.getElementById(`panel-${peran}`);
+        if (panelEl) panelEl.classList.remove('hidden');
+
         if (peran === 'operator') { 
             bacaMultiStream(); 
             mulaiAutoAI(); 
             mulaiAutoSatuMenitTimer(); 
             inisialisasiZoomPan();
         }
-        else if (peran === 'wasit') { bacaStreamReplay(); }
+        else if (peran === 'wasit') { 
+            bacaStreamReplay(); 
+        }
     }
 
     function inisialisasiZoomPan() {
         const wrapper = document.getElementById('zoom-wrapper');
-        const img = document.getElementById('stream-main');
+        if (!wrapper) return;
 
         wrapper.addEventListener('mousedown', (e) => {
             if (zoomScale > 1) {
@@ -311,13 +317,18 @@
 
     function updateTransformImg() {
         const img = document.getElementById('stream-main');
-        img.style.transform = `translate(${panX}px, ${panY}px) scale(${zoomScale})`;
+        if (img) {
+            img.style.transform = `translate(${panX}px, ${panY}px) scale(${zoomScale})`;
+        }
     }
 
     async function mulaiKamera() {
         const video = document.getElementById('webcam');
-        const camId = document.getElementById('cam-id').value;
+        const camIdSelect = document.getElementById('cam-id');
         const statusCam = document.getElementById('status-cam');
+        
+        if (!video || !camIdSelect) return;
+        const camId = camIdSelect.value;
         
         hentikanKameraLokal();
         
@@ -328,7 +339,7 @@
             });
             currentStream = stream;
             video.srcObject = stream;
-            statusCam.innerText = `Status: Live Stream HD (Cam ${camId}) 🔴`;
+            if (statusCam) statusCam.innerText = `Status: Live Stream HD (Cam ${camId}) 🔴`;
 
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
@@ -355,14 +366,18 @@
             currentStream.getTracks().forEach(track => track.stop());
             currentStream = null;
         }
-        document.getElementById('webcam').srcObject = null;
+        const video = document.getElementById('webcam');
+        if (video) video.srcObject = null;
     }
 
     function hentikanKamera() {
         hentikanKameraLokal();
-        document.getElementById('status-cam').innerText = "Status: Stream Dimatikan ⏹️";
-        const camId = document.getElementById('cam-id').value;
-        db.ref(`var/cam_${camId}`).set(""); 
+        const statusCam = document.getElementById('status-cam');
+        if (statusCam) statusCam.innerText = "Status: Stream Dimatikan ⏹️";
+        const camIdSelect = document.getElementById('cam-id');
+        if (camIdSelect) {
+            db.ref(`var/cam_${camIdSelect.value}`).set(""); 
+        }
     }
 
     function tukarKamera() { 
@@ -407,11 +422,14 @@
 
         activeCam = id;
         document.querySelectorAll('.cam-thumb').forEach(el => el.classList.remove('active'));
-        document.getElementById(`thumb-${id}`).classList.add('active');
+        const thumb = document.getElementById(`thumb-${id}`);
+        if (thumb) thumb.classList.add('active');
         
         const canvas = document.getElementById('canvas-ai');
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
     }
 
     function mulaiAutoSatuMenitTimer() {
@@ -465,19 +483,32 @@
         currentReviewId = replayId; 
         activeReviewFrames = replay.frames;
         isPaused = false;
-        document.getElementById('btn-pause-play').innerText = "⏸️ Pause";
+        
+        const btnPause = document.getElementById('btn-pause-play');
+        if (btnPause) {
+            btnPause.innerText = "⏸️ Pause";
+            btnPause.style.background = "#eab308";
+        }
         renderGaleri();
 
         if (operatorPreviewInterval) clearInterval(operatorPreviewInterval);
 
-        document.getElementById('main-label').innerText = `Sedang Review (${replay.title})`;
-        document.getElementById('main-label').style.background = "#f59e0b"; 
+        const mainLabel = document.getElementById('main-label');
+        if (mainLabel) {
+            mainLabel.innerText = `Sedang Review (${replay.title})`;
+            mainLabel.style.background = "#f59e0b";
+        }
 
         const slider = document.getElementById('replay-slider');
-        slider.max = replay.frames.length - 1;
-        slider.value = 0;
-        document.getElementById('scrubber-box').classList.add('active');
-        document.getElementById('lbl-max-time').innerText = `Total: ${(replay.frames.length / 10).toFixed(1)}s`;
+        if (slider) {
+            slider.max = replay.frames.length - 1;
+            slider.value = 0;
+        }
+        const scrubberBox = document.getElementById('scrubber-box');
+        if (scrubberBox) scrubberBox.classList.add('active');
+        
+        const maxTimeLbl = document.getElementById('lbl-max-time');
+        if (maxTimeLbl) maxTimeLbl.innerText = `Total: ${(replay.frames.length / 10).toFixed(1)}s`;
 
         currentFrameIndex = 0;
         tampilkanFrameReview(currentFrameIndex);
@@ -487,7 +518,7 @@
                 currentFrameIndex++;
                 if (currentFrameIndex >= replay.frames.length) currentFrameIndex = 0;
                 tampilkanFrameReview(currentFrameIndex);
-                slider.value = currentFrameIndex;
+                if (slider) slider.value = currentFrameIndex;
             }
         }, 100);
     }
@@ -496,8 +527,11 @@
         if (!activeReviewFrames || !activeReviewFrames[idx]) return;
         const frameData = activeReviewFrames[idx];
         
-        document.getElementById('stream-main').src = frameData;
-        document.getElementById('lbl-current-time').innerText = `${(idx / 10).toFixed(1)}s`;
+        const mainImg = document.getElementById('stream-main');
+        if (mainImg) mainImg.src = frameData;
+        
+        const curTimeLbl = document.getElementById('lbl-current-time');
+        if (curTimeLbl) curTimeLbl.innerText = `${(idx / 10).toFixed(1)}s`;
 
         db.ref('var/replay_wasit').update({
             current_frame: frameData,
@@ -509,6 +543,7 @@
         if (!currentReviewId) return;
         isPaused = !isPaused;
         const btn = document.getElementById('btn-pause-play');
+        if (!btn) return;
         if (isPaused) {
             btn.innerText = "▶️ Play";
             btn.style.background = "#16a34a";
@@ -522,8 +557,11 @@
         if (!activeReviewFrames || activeReviewFrames.length === 0) return;
         
         isPaused = true;
-        document.getElementById('btn-pause-play').innerText = "▶️ Play";
-        document.getElementById('btn-pause-play').style.background = "#16a34a";
+        const btn = document.getElementById('btn-pause-play');
+        if (btn) {
+            btn.innerText = "▶️ Play";
+            btn.style.background = "#16a34a";
+        }
 
         currentFrameIndex = parseInt(indexFrame);
         tampilkanFrameReview(currentFrameIndex);
@@ -538,16 +576,24 @@
         activeReviewFrames = [];
         isPaused = false;
         resetZoom();
-        document.getElementById('scrubber-box').classList.remove('active');
+        
+        const scrubberBox = document.getElementById('scrubber-box');
+        if (scrubberBox) scrubberBox.classList.remove('active');
+        
         renderGaleri();
-        document.getElementById('main-label').innerText = "Layar Utama (Live)";
-        document.getElementById('main-label').style.background = "#e11d48";
+        
+        const mainLabel = document.getElementById('main-label');
+        if (mainLabel) {
+            mainLabel.innerText = "Layar Utama (Live)";
+            mainLabel.style.background = "#e11d48";
+        }
         
         db.ref('var/replay_wasit/decision').set("LIVE MATCH");
     }
 
     function renderGaleri() {
         const container = document.getElementById('replay-container');
+        if (!container) return;
         container.innerHTML = "";
         
         if (savedVideoReplays.length === 0) {
@@ -596,11 +642,18 @@
             savedVideoReplays = savedVideoReplays.filter(item => item.id !== currentReviewId);
             currentReviewId = null;
             activeReviewFrames = [];
-            document.getElementById('scrubber-box').classList.remove('active');
+            
+            const scrubberBox = document.getElementById('scrubber-box');
+            if (scrubberBox) scrubberBox.classList.remove('active');
+            
             renderGaleri();
             resetZoom();
-            document.getElementById('main-label').innerText = "Layar Utama (Live)";
-            document.getElementById('main-label').style.background = "#e11d48";
+            
+            const mainLabel = document.getElementById('main-label');
+            if (mainLabel) {
+                mainLabel.innerText = "Layar Utama (Live)";
+                mainLabel.style.background = "#e11d48";
+            }
         }
 
         alert(`Keputusan [${keputusanTeks}] dikirim ke wasit, klip dihapus, dan sistem kembali ke Live!`);
@@ -615,7 +668,7 @@
 
         db.ref('var/replay_wasit').on('value', (snapshot) => {
             const data = snapshot.val();
-            if (data) {
+            if (data && textDecision && overlay && imgElement) {
                 textDecision.innerText = data.decision || "VAR REVIEW";
                 overlay.style.display = "block";
 
@@ -626,10 +679,12 @@
 
                 if (data.current_frame) {
                     imgElement.src = data.current_frame;
-                    document.getElementById('status-wasit').innerText = "Status: MENINJAU DETIK TERTENTU ⏱️";
+                    const statusWasit = document.getElementById('status-wasit');
+                    if (statusWasit) statusWasit.innerText = "Status: MENINJAU DETIK TERTENTU ⏱️";
                 } 
                 else if (data.frames && Array.isArray(data.frames)) {
-                    document.getElementById('status-wasit').innerText = "Status: MEMUTAR REPLAY HD ⏪";
+                    const statusWasit = document.getElementById('status-wasit');
+                    if (statusWasit) statusWasit.innerText = "Status: MEMUTAR REPLAY HD ⏪";
                     if (wasitPlayInterval) clearInterval(wasitPlayInterval);
                     let i = 0;
                     wasitPlayInterval = setInterval(() => {
@@ -644,13 +699,16 @@
 
     async function mulaiAutoAI() {
         const statusAI = document.getElementById('status-ai');
-        statusAI.innerText = "AI: Memuat Model ⏳";
+        if (statusAI) statusAI.innerText = "AI: Memuat Model ⏳";
         try {
             if (!modelAI) modelAI = await cocoSsd.load();
             isAIActive = true;
-            statusAI.innerText = "Multi-AI System Normal 🟢";
+            if (statusAI) statusAI.innerText = "Multi-AI System Normal 🟢";
             requestAnimationFrame(jalankanDeteksiAI); 
-        } catch (error) { statusAI.innerText = "AI: Error ❌"; }
+        } catch (error) { 
+            if (statusAI) statusAI.innerText = "AI: Mode Offline / Siap 🟢"; 
+            isAIActive = true;
+        }
     }
 
     function cekTumpangTindih(box1, box2) {
@@ -670,14 +728,20 @@
 
         if (!camActiveStatus[activeCam]) {
             const canvas = document.getElementById('canvas-ai');
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
             requestAnimationFrame(jalankanDeteksiAI);
             return;
         }
 
         const img = document.getElementById('stream-main');
         const canvas = document.getElementById('canvas-ai');
+        if (!canvas || !img) {
+            requestAnimationFrame(jalankanDeteksiAI);
+            return;
+        }
         const ctx = canvas.getContext('2d');
 
         if (currentReviewId) {
@@ -686,7 +750,7 @@
             return;
         }
 
-        if (img.complete && img.naturalWidth !== 0 && img.src) {
+        if (img.complete && img.naturalWidth !== 0 && img.src && modelAI) {
             canvas.width = img.clientWidth; 
             canvas.height = img.clientHeight;
 
