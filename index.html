@@ -41,7 +41,7 @@
         .btn-green { background: #16a34a; color: white; width: 31%; } .btn-green:hover { background: #15803d; }
         .btn-red { background: #e11d48; color: white; width: 100%; } .btn-red:hover { background: #be123c; }
         .btn-red-half { background: #e11d48; color: white; width: 31%; } .btn-red-half:hover { background: #be123c; }
-        .btn-orange { background: #d97706; color: white; width: 100%; } .btn-orange:hover { background: #b45309; }
+        .btn-orange { background: #d97706; color: white; width: 31%; } .btn-orange:hover { background: #b45309; }
         .btn-yellow { background: #eab308; color: black; width: 48%; } .btn-yellow:hover { background: #ca8a04; color: white; }
         .btn-gray { background: #475569; color: white; width: 48%; } .btn-gray:hover { background: #334155; }
         
@@ -167,40 +167,21 @@
                     <div class="status-badge" style="background:#10b981; margin-bottom:10px;">Controlled Send Active ⚡</div>
 
                     <div class="replay-list">
-                        <h4 style="margin:0 0 10px 0; color:#94a3b8;">📼 Bank Replay Otomatis</h4>
+                        <h4 style="margin:0 0 10px 0; color:#94a3b8;">📼 Bank Replay (Otomatis per 1 Menit & AI)</h4>
                         <div id="replay-container">
                             <div style="color: #64748b; font-size: 0.8rem;">Menyiapkan klip otomatis...</div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Sistem Tagging Pemain -->
-                <div class="replay-list" style="margin-top: 15px; border-color: #facc15;">
-                    <h4 style="margin:0 0 10px 0; color:#facc15;">⚠️ Catat Pelanggaran Pemain</h4>
-                    
-                    <div style="display: flex; gap: 5px; margin-bottom: 10px;">
-                        <input type="text" id="input-nama-pemain" placeholder="Nama / No Punggung" style="width: 70%; padding: 8px; border-radius: 6px; border: 1px solid #475569; background: #334155; color: white;">
-                        <button class="btn-blue" style="width: 30%;" onclick="tambahPemain()">+ Tambah</button>
-                    </div>
-
-                    <select id="pilih-pemain" style="background: #1e293b; border-color: #38bdf8;">
-                        <option value="">-- Pilih Pemain yang Melanggar --</option>
-                    </select>
-
-                    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; margin-top: 10px;">
-                        <button class="btn-yellow" onclick="kirimKeputusanManual('🟨 KARTU KUNING', true)">🟨 KUNING</button>
-                        <button class="btn-red" style="width: 48%" onclick="kirimKeputusanManual('🟥 KARTU MERAH', true)">🟥 MERAH</button>
-                    </div>
-                </div>
-
                 <div class="replay-list" style="margin-top: 15px;">
-                    <h4 style="margin:0 0 10px 0; color:#94a3b8;">Keputusan Reguler (Tanpa Kartu)</h4>
+                    <h4 style="margin:0 0 10px 0; color:#94a3b8;">Kirim Keputusan Akhir ke Wasit</h4>
                     <div style="display: flex; flex-wrap: wrap; justify-content: space-between;">
-                        <button class="btn-green" onclick="kirimKeputusanManual('⚽ DECISION: GOAL', false)">⚽ GOAL</button>
-                        <button class="btn-red-half" onclick="kirimKeputusanManual('❌ DECISION: NO GOAL', false)">❌ NO GOAL</button>
-                        <button class="btn-orange" onclick="kirimKeputusanManual('🛑 DECISION: FOUL', false)">🛑 FOUL</button>
-                        <button class="btn-yellow" onclick="kirimKeputusanManual('✋ DECISION: HANDBALL', false)">✋ HANDBALL</button>
-                        <button class="btn-gray" onclick="kirimKeputusanManual('✅ DECISION: PLAY ON', false)">✅ PLAY ON</button>
+                        <button class="btn-green" onclick="kirimKeputusanManual('⚽ DECISION: GOAL')">⚽ GOAL</button>
+                        <button class="btn-red-half" onclick="kirimKeputusanManual('❌ DECISION: NO GOAL')">❌ NO GOAL</button>
+                        <button class="btn-orange" onclick="kirimKeputusanManual('🛑 DECISION: FOUL')">🛑 FOUL</button>
+                        <button class="btn-yellow" onclick="kirimKeputusanManual('✋ DECISION: HANDBALL')">✋ HANDBALL</button>
+                        <button class="btn-gray" onclick="kirimKeputusanManual('✅ DECISION: PLAY ON')">✅ PLAY ON</button>
                     </div>
                 </div>
             </div>
@@ -262,33 +243,6 @@
     let lastAIDetectTime = 0;
     const AI_INTERVAL_MS = 100;
 
-    // === DATABASE PEMAIN ===
-    let daftarPemain = ["Pemain A (10)", "Kiper (1)"];
-
-    function updateDropdownPemain() {
-        const select = document.getElementById('pilih-pemain');
-        if (!select) return;
-        select.innerHTML = '<option value="">-- Pilih Pemain yang Melanggar --</option>';
-        daftarPemain.forEach(pemain => {
-            const opt = document.createElement('option');
-            opt.value = pemain;
-            opt.innerText = pemain;
-            select.appendChild(opt);
-        });
-    }
-
-    function tambahPemain() {
-        const input = document.getElementById('input-nama-pemain');
-        const nama = input.value.trim();
-        if (nama) {
-            daftarPemain.push(nama);
-            updateDropdownPemain();
-            input.value = "";
-            alert(`${nama} ditambahkan!`);
-        }
-    }
-    updateDropdownPemain();
-
     // === FUNGSI TEXT TO SPEECH (VOICE ALERT) ===
     function bicaraAI(teks) {
         if ('speechSynthesis' in window) {
@@ -332,11 +286,23 @@
         if (peran === 'operator') { 
             bacaMultiStream(); 
             mulaiAutoAI(); 
+            mulaiAutoSatuMenitTimer(); // MENGAKTIFKAN KEMBALI TIMER 1 MENIT
             inisialisasiZoomPan();
         }
         else if (peran === 'wasit') { 
             bacaStreamReplay(); 
         }
+    }
+
+    // === FUNGSI PENYIMPANAN OTOMATIS TIAP 1 MENIT ===
+    function mulaiAutoSatuMenitTimer() {
+        setInterval(() => {
+            // Hanya simpan jika kamera aktif dan ada minimal 30 frame tersimpan
+            if (!camActiveStatus[activeCam]) return;
+            if (camBuffers[activeCam].length >= 30) {
+                simpanKlipOtomatis(`Klip Otomatis (${new Date().toLocaleTimeString()})`, false, -1);
+            }
+        }, 60000); // 60.000 ms = 1 Menit
     }
 
     function inisialisasiZoomPan() {
@@ -473,18 +439,17 @@
         
         const idUnik = Date.now();
         const frameCopy = [...camBuffers[activeCam]]; 
-        const targetIndex = highlightIndex !== -1 ? highlightIndex : (frameCopy.length - 1);
         
-        // Buat Jendela 3 Detik: 1 detik sebelum (20 frame) sampai 1 detik sesudah (20 frame)
-        const startHighlight = Math.max(0, targetIndex - FPS);
-        const endHighlight = Math.min(frameCopy.length - 1, targetIndex + FPS);
+        // Buat Jendela 3 Detik jika highlightIndex valid, jika tidak set 0
+        const startHighlight = highlightIndex !== -1 ? Math.max(0, highlightIndex - FPS) : 0;
+        const endHighlight = highlightIndex !== -1 ? Math.min(frameCopy.length - 1, highlightIndex + FPS) : 0;
         
         savedVideoReplays.push({ 
             id: idUnik, 
             title: judul, 
             cam: activeCam, 
             frames: frameCopy, 
-            highlightIndex: targetIndex, 
+            highlightIndex: highlightIndex, // Menyimpan -1 jika ini klip 1-menit reguler
             startHighlight: startHighlight,
             endHighlight: endHighlight,
             createdAt: Date.now() 
@@ -520,22 +485,28 @@
         savedVideoReplays.slice().reverse().forEach((replay) => {
             const isProtected = (currentReviewId === replay.id);
             
-            // Konversi Frame ke Detik Realtime (FPS = 20)
-            const detikPuncak = (replay.highlightIndex / FPS).toFixed(1);
-            const detikStart = (replay.startHighlight / FPS).toFixed(1);
-            const detikEnd = (replay.endHighlight / FPS).toFixed(1);
-            
             const div = document.createElement('div');
             div.className = `replay-item ${isProtected ? 'protected' : ''}`;
+            
+            let highlightHTML = "";
+            let btn3DetikHTML = "";
+            
+            // Jika ini klip deteksi AI (highlightIndex bukan -1), tampilkan penanda detik
+            if (replay.highlightIndex !== -1) {
+                const detikPuncak = (replay.highlightIndex / FPS).toFixed(1);
+                const detikStart = (replay.startHighlight / FPS).toFixed(1);
+                const detikEnd = (replay.endHighlight / FPS).toFixed(1);
+                highlightHTML = `<br><span style="color:#facc15; font-size:0.75rem; font-weight:bold;">⚡ Area Kejadian: ${detikStart}s - ${detikEnd}s (Puncak: ${detikPuncak}s)</span>`;
+                btn3DetikHTML = `<div class="replay-item-actions"><button class="btn-orange" style="flex-grow:1; margin-right:4px;" onclick="putarKejadian3Detik(${replay.id})">⏱️ Putar 3 Detik Kejadian</button></div>`;
+            }
+
             div.innerHTML = `
                 <div>
                     <strong>${replay.title}</strong><br>
                     <small style="color:${isProtected ? '#f59e0b' : '#38bdf8'};">Cam ${replay.cam} ${isProtected ? '🔒 (Direview)' : ''}</small>
-                    ${replay.highlightIndex > 0 ? `<br><span style="color:#facc15; font-size:0.75rem; font-weight:bold;">⚡ Area Kejadian: ${detikStart}s - ${detikEnd}s (Puncak: ${detikPuncak}s)</span>` : ''}
+                    ${highlightHTML}
                 </div>
-                <div class="replay-item-actions">
-                    ${replay.highlightIndex > 0 ? `<button class="btn-orange" style="flex-grow:1; margin-right:4px;" onclick="putarKejadian3Detik(${replay.id})">⏱️ Putar 3 Detik Kejadian</button>` : ''}
-                </div>
+                ${btn3DetikHTML}
                 <div class="replay-item-actions" style="margin-top: 4px;">
                     <button class="btn-yellow" onclick="previewReplayLokal(${replay.id})">▶️ Lihat Full</button>
                     <button class="btn-gray" onclick="kembaliKeLive()">🔴 Live</button>
@@ -549,7 +520,7 @@
     // Fungsi Super Pintar: Memutar tepat 3 detik area kejadian (Slow Motion)
     function putarKejadian3Detik(replayId) {
         const replay = savedVideoReplays.find(r => r.id === replayId);
-        if (!replay) return;
+        if (!replay || replay.highlightIndex === -1) return;
 
         previewReplayLokal(replayId); // Load replay ke layar
         
@@ -670,25 +641,13 @@
         }
     }
 
-    // Fungsi Kirim Keputusan (Mendukung Tagging Pemain)
-    function kirimKeputusanManual(keputusanTeks, pakaiTagPemain) {
-        let finalTeks = keputusanTeks;
-        
-        if (pakaiTagPemain) {
-            const pemain = document.getElementById('pilih-pemain').value;
-            if (!pemain) { alert("Pilih nama pemain dari Dropdown terlebih dahulu!"); return; }
-            finalTeks = `${keputusanTeks} - ${pemain}`;
-        }
-
-        db.ref('var/replay_wasit/decision').set(finalTeks);
-
+    function kirimKeputusanManual(keputusanTeks) {
+        db.ref('var/replay_wasit/decision').set(keputusanTeks);
         if (currentReviewId) {
             savedVideoReplays = savedVideoReplays.filter(item => item.id !== currentReviewId);
             kembaliKeLive();
         }
-
-        alert(`Keputusan [${finalTeks}] dikirim!`);
-        document.getElementById('pilih-pemain').value = ""; 
+        alert(`Keputusan [${keputusanTeks}] dikirim!`);
     }
 
     let wasitPlayInterval = null;
@@ -705,8 +664,8 @@
                 overlay.style.display = "block";
 
                 if(data.decision.includes("GOAL") && !data.decision.includes("NO GOAL")) textDecision.style.borderColor = "#16a34a";
-                else if(data.decision.includes("HANDBALL") || data.decision.includes("KUNING")) textDecision.style.borderColor = "#eab308";
-                else if(data.decision.includes("FOUL") || data.decision.includes("MERAH") || data.decision.includes("NO GOAL")) textDecision.style.borderColor = "#e11d48";
+                else if(data.decision.includes("HANDBALL")) textDecision.style.borderColor = "#eab308";
+                else if(data.decision.includes("FOUL") || data.decision.includes("NO GOAL")) textDecision.style.borderColor = "#e11d48";
                 else textDecision.style.borderColor = "#fff";
 
                 if (data.current_frame) {
@@ -842,15 +801,15 @@
 
                     if (potensiGoal) { 
                         lastAITrigger = now; 
-                        bicaraAI("Peringatan, Potensi Gol!"); // Voice AI
+                        bicaraAI("Peringatan, Potensi Gol!");
                         simpanKlipOtomatis("⚽ AI REVIEW: POTENSI GOAL", true, currentFrameIndex); 
                     } else if (potensiHandball) { 
                         lastAITrigger = now; 
-                        bicaraAI("Peringatan, Handball!"); // Voice AI
+                        bicaraAI("Peringatan, Handball!");
                         simpanKlipOtomatis("✋ AI REVIEW: POTENSI HANDBALL", true, currentFrameIndex); 
                     } else if (potensiPelanggaran) { 
                         lastAITrigger = now; 
-                        bicaraAI("Peringatan, Kontak Fisik!"); // Voice AI
+                        bicaraAI("Peringatan, Kontak Fisik!");
                         simpanKlipOtomatis("🛑 AI REVIEW: KONTAK FISIK", true, currentFrameIndex); 
                     }
                 }
