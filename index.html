@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VAR FUTSAL PRO - Auto-Delete on Decision</title>
+    <title>VAR FUTSAL PRO - HD, Auto-Delete & Audio Beep</title>
     
     <!-- SDK Firebase (V8) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -58,7 +58,7 @@
 </head>
 <body>
 
-    <h1>⚽ VAR FUTSAL PRO</h1>
+    <h1>⚽ VAR FUTSAL PRO (HD + AUDIO BEEP)</h1>
 
     <!-- MENU UTAMA -->
     <div id="menu" class="card">
@@ -78,7 +78,7 @@
         </select>
         <div class="video-box"><video id="webcam" autoplay playsinline muted></video></div>
         <br>
-        <button class="btn-green" style="width:100%; margin-bottom: 5px;" onclick="mulaiKamera()">🟢 Mulai Live Stream</button>
+        <button class="btn-green" style="width:100%; margin-bottom: 5px;" onclick="mulaiKamera()">🟢 Mulai Live Stream (HD)</button>
         <button class="btn-red" style="margin-bottom: 5px;" onclick="hentikanKamera()">⏹️ Matikan Stream</button>
         <button class="btn-gray" style="width:100%;" onclick="tukarKamera()">🔄 Ganti Kamera</button>
         <div id="status-cam" class="status-badge">Status: Menunggu...</div>
@@ -111,7 +111,7 @@
         
         <div style="margin-top: 10px;">
             <div id="status-ai" class="status-badge">AI: Menyiapkan...</div>
-            <div class="status-badge" style="background:#10b981;">Auto-Delete on Decision ⚡</div>
+            <div class="status-badge" style="background:#10b981;">Audio Beep & HD Sync Active 🔊</div>
         </div>
 
         <!-- REPLAY LIST -->
@@ -161,7 +161,7 @@
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    let currentStream = null, isFacingUser = false, isUploading = false;
+    let currentStream = null, isFacingUser = false;
     let cameraInterval = null;
     let modelAI = null, isAIActive = false;
     let activeCam = 1; 
@@ -173,7 +173,28 @@
     let currentReviewId = null; 
     let lastAITrigger = 0;
     let lastAIDetectTime = 0;
-    const AI_INTERVAL_MS = 80;
+    const AI_INTERVAL_MS = 100;
+
+    // --- FUNGSI AUDIO BEEP (WEB AUDIO API) ---
+    function playBeep() {
+        try {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // Nada tinggi (A5) agar jelas terdengar
+            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + 0.2); // Berbunyi selama 0.2 detik
+        } catch (e) {
+            console.log("Audio Context tidak didukung atau diblokir browser.");
+        }
+    }
 
     function pilihPeran(peran) {
         document.getElementById('menu').classList.add('hidden');
@@ -196,25 +217,41 @@
         const mode = isFacingUser ? "user" : "environment";
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: mode, width: { ideal: 320 }, height: { ideal: 240 } }
+                video: { 
+                    facingMode: mode, 
+                    width: { ideal: 1280 }, 
+                    height: { ideal: 720 },
+                    frameRate: { ideal: 30 }
+                }
             });
             currentStream = stream;
             video.srcObject = stream;
-            statusCam.innerText = `Status: Live Stream (Cam ${camId}) 🔴`;
+            statusCam.innerText = `Status: Live Stream HD (Cam ${camId}) 🔴`;
 
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
-            canvas.width = 320; canvas.height = 240;
+            canvas.width = 640;  
+            canvas.height = 360;
+
+            let isSending = false;
 
             cameraInterval = setInterval(async () => {
-                if (video.readyState === video.HAVE_ENOUGH_DATA && !isUploading) {
-                    isUploading = true; 
+                if (video.readyState === video.HAVE_ENOUGH_DATA && !isSending) {
+                    isSending = true;
                     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    const frameData = canvas.toDataURL('image/jpeg', 0.2); 
-                    try { await db.ref(`var/cam_${camId}`).set(frameData); } catch (e) {} finally { isUploading = false; }
+                    const frameData = canvas.toDataURL('image/jpeg', 0.7); 
+                    
+                    try {
+                        await db.ref(`var/cam_${camId}`).set(frameData);
+                    } catch (e) {
+                    } finally {
+                        isSending = false;
+                    }
                 }
-            }, 60); 
-        } catch (err) { alert("Gagal Akses Kamera!"); }
+            }, 50); 
+        } catch (err) { 
+            alert("Gagal Akses Kamera HD! Pastikan izin kamera diaktifkan."); 
+        }
     }
 
     function hentikanKameraLokal() {
@@ -224,7 +261,6 @@
             currentStream = null;
         }
         document.getElementById('webcam').srcObject = null;
-        isUploading = false;
     }
 
     function hentikanKamera() {
@@ -244,15 +280,23 @@
             db.ref(`var/cam_${id}`).on('value', (snapshot) => {
                 const data = snapshot.val();
                 if (data) {
-                    document.getElementById(`stream-cam${id}`).src = data;
+                    const thumbImg = document.getElementById(`stream-cam${id}`);
+                    if(thumbImg) thumbImg.src = data;
+
                     if (activeCam === id && !operatorPreviewInterval) {
-                        document.getElementById('stream-main').src = data;
+                        const mainImg = document.getElementById('stream-main');
+                        if(mainImg) mainImg.src = data;
                     }
+                    
                     camBuffers[id].push(data);
                     if (camBuffers[id].length > ONE_MIN_FRAMES) camBuffers[id].shift(); 
                 } else {
-                    document.getElementById(`stream-cam${id}`).removeAttribute('src');
-                    if (activeCam === id && !operatorPreviewInterval) document.getElementById('stream-main').removeAttribute('src');
+                    const thumbImg = document.getElementById(`stream-cam${id}`);
+                    if(thumbImg) thumbImg.removeAttribute('src');
+                    if (activeCam === id && !operatorPreviewInterval) {
+                        const mainImg = document.getElementById('stream-main');
+                        if(mainImg) mainImg.removeAttribute('src');
+                    }
                 }
             });
         });
@@ -278,12 +322,12 @@
     function mulaiAutoSatuMenitTimer() {
         setInterval(() => {
             if (camBuffers[activeCam].length >= 30) {
-                simpanKlipOtomatis(`Klip Otomatis (${new Date().toLocaleTimeString()})`);
+                simpanKlipOtomatis(`Klip Otomatis (${new Date().toLocaleTimeString()})`, false);
             }
         }, 60000); 
     }
 
-    function simpanKlipOtomatis(judul) {
+    function simpanKlipOtomatis(judul, playSound = true) {
         if (camBuffers[activeCam].length < 10) return;
         
         const idUnik = Date.now();
@@ -299,9 +343,14 @@
         
         renderGaleri();
 
+        // Bunyikan Beep Audio jika AI mendeteksi kejadian penting
+        if (playSound) {
+            playBeep();
+        }
+
         setTimeout(() => {
             cekDanHapusKlip(idUnik);
-        }, 300000); // 5 Menit default jika tidak ada keputusan
+        }, 300000); 
     }
 
     function cekDanHapusKlip(idUnik) {
@@ -335,7 +384,7 @@
             mainImg.src = replay.frames[i];
             i++;
             if (i >= replay.frames.length) i = 0; 
-        }, 100);
+        }, 80);
     }
 
     function kembaliKeLive() {
@@ -387,18 +436,14 @@
         }
     }
 
-    // --- FITUR BARU: HAPUS KLIP OTOMATIS SAAT KEPUTUSAN AKHIR DIAMBIL ---
     function kirimKeputusanManual(keputusanTeks) {
-        // 1. Kirim keputusan ke wasit
         db.ref('var/replay_wasit/decision').set(keputusanTeks);
 
-        // 2. Jika sedang ada klip yang di-review/dikirim, HAPUS SEKARANG SECARA OTOMATIS
         if (currentReviewId) {
             savedVideoReplays = savedVideoReplays.filter(item => item.id !== currentReviewId);
             currentReviewId = null;
             renderGaleri();
             kembaliKeLive();
-            console.log("[Auto-Delete] Klip yang direview telah dihapus otomatis setelah keputusan diambil.");
         }
 
         alert(`Keputusan [${keputusanTeks}] dikirim dan klip yang direview telah dihapus otomatis!`);
@@ -425,7 +470,7 @@
             const data = snapshot.val();
             if (data && data.frames && Array.isArray(data.frames)) {
                 
-                document.getElementById('status-wasit').innerText = "Status: MEMUTAR REPLAY (BERSIH) ⏪";
+                document.getElementById('status-wasit').innerText = "Status: MEMUTAR REPLAY HD ⏪";
                 textDecision.innerText = data.decision;
                 overlay.style.display = "block";
 
@@ -440,7 +485,7 @@
                     imgElement.src = data.frames[i];
                     i++;
                     if (i >= data.frames.length) i = 0; 
-                }, 100); 
+                }, 80); 
             }
         });
     }
@@ -451,7 +496,7 @@
         try {
             if (!modelAI) modelAI = await cocoSsd.load();
             isAIActive = true;
-            statusAI.innerText = "Multi-AI Ultra Responsive Aktif 🟢";
+            statusAI.innerText = "Multi-AI + Audio Beep Aktif 🟢";
             requestAnimationFrame(jalankanDeteksiAI); 
         } catch (error) { statusAI.innerText = "AI: Error ❌"; }
     }
@@ -562,13 +607,13 @@
                 if (now - lastAITrigger > 12000) { 
                     if (potensiGoal) { 
                         lastAITrigger = now; 
-                        simpanKlipOtomatis("⚽ AI REVIEW: POTENSI GOAL"); 
+                        simpanKlipOtomatis("⚽ AI REVIEW: POTENSI GOAL", true); 
                     } else if (potensiHandball) { 
                         lastAITrigger = now; 
-                        simpanKlipOtomatis("✋ AI REVIEW: POTENSI HANDBALL"); 
+                        simpanKlipOtomatis("✋ AI REVIEW: POTENSI HANDBALL", true); 
                     } else if (potensiPelanggaran) { 
                         lastAITrigger = now; 
-                        simpanKlipOtomatis("🛑 AI REVIEW: FOUL / KONTAK FISIK"); 
+                        simpanKlipOtomatis("🛑 AI REVIEW: FOUL / KONTAK FISIK", true); 
                     }
                 }
 
