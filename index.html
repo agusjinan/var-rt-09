@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VAR FUTSAL RT09 - Stable & Error-Free</title>
+    <title>VAR FUTSAL PRO - Controlled Send to Referee</title>
     
     <!-- SDK Firebase (V8) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -80,7 +80,7 @@
 </head>
 <body>
 
-    <h1>⚽ VAR FUTSAL RT09</h1>
+    <h1>⚽ VAR FUTSAL PRO</h1>
 
     <!-- MENU UTAMA -->
     <div id="menu" class="card">
@@ -163,7 +163,7 @@
                 <div>
                     <h3 style="margin-top:0; color:#38bdf8;">🎛️ Kontrol & Keputusan VAR</h3>
                     <div id="status-ai" class="status-badge" style="margin-bottom:10px;">AI: Menyiapkan...</div>
-                    <div class="status-badge" style="background:#10b981; margin-bottom:10px;">System Stable & Secure ⚡</div>
+                    <div class="status-badge" style="background:#10b981; margin-bottom:10px;">Controlled Send Active ⚡</div>
 
                     <div class="replay-list">
                         <h4 style="margin:0 0 10px 0; color:#94a3b8;">📼 Bank Replay Otomatis (1 Menit)</h4>
@@ -441,17 +441,21 @@
         }, 60000); 
     }
 
-    function simpanKlipOtomatis(judul, playSound = true) {
+    function simpanKlipOtomatis(judul, playSound = true, highlightIndex = -1) {
         if (!camActiveStatus[activeCam] || camBuffers[activeCam].length < 10) return;
         
         const idUnik = Date.now();
         const frameCopy = [...camBuffers[activeCam]]; 
+        
+        // Jika AI tidak mengirim index, gunakan frame terakhir saat klip disimpan
+        const targetIndex = highlightIndex !== -1 ? highlightIndex : (frameCopy.length - 1);
         
         savedVideoReplays.push({ 
             id: idUnik, 
             title: judul, 
             cam: activeCam, 
             frames: frameCopy, 
+            highlightIndex: targetIndex, // Menyimpan titik kejadian
             createdAt: Date.now() 
         });
         
@@ -474,6 +478,51 @@
 
         savedVideoReplays = savedVideoReplays.filter(item => item.id !== idUnik);
         renderGaleri();
+    }
+
+    function renderGaleri() {
+        const container = document.getElementById('replay-container');
+        if (!container) return;
+        container.innerHTML = "";
+        
+        if (savedVideoReplays.length === 0) {
+            container.innerHTML = `<div style="color: #64748b; font-size: 0.8rem;">Belum ada klip tersimpan. Klip otomatis masuk tiap 1 menit (hanya saat kamera aktif).</div>`;
+            return;
+        }
+
+        savedVideoReplays.slice().reverse().forEach((replay) => {
+            const isProtected = (currentReviewId === replay.id);
+            // Hitung detik (asumsi 10 frame per detik berdasarkan slider Anda)
+            const detikKejadian = replay.highlightIndex ? (replay.highlightIndex / 10).toFixed(1) : 0;
+            
+            const div = document.createElement('div');
+            div.className = `replay-item ${isProtected ? 'protected' : ''}`;
+            div.innerHTML = `
+                <div>
+                    <strong>${replay.title}</strong><br>
+                    <small style="color:${isProtected ? '#f59e0b' : '#38bdf8'};">Cam ${replay.cam} | 1 Menit ${isProtected ? '🔒 (Direview)' : ''}</small>
+                    ${replay.highlightIndex > 0 ? `<br><span style="color:#facc15; font-size:0.75rem; font-weight:bold;">⚡ Kejadian di: ${detikKejadian}s</span>` : ''}
+                </div>
+                <div>
+                    ${replay.highlightIndex > 0 ? `<button class="btn-orange" onclick="lompatKeKejadian(${replay.id}, ${replay.highlightIndex})">⏱️ Cek Kejadian</button>` : ''}
+                    <button class="btn-yellow" onclick="previewReplayLokal(${replay.id})">▶️ Lihat</button>
+                    <button class="btn-gray" onclick="kembaliKeLive()">🔴 Live</button>
+                    <button class="btn-blue" onclick="kirimReplayTersimpan(${replay.id})">📺 Kirim Wasit</button>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function lompatKeKejadian(replayId, frameIndex) {
+        previewReplayLokal(replayId); // Buka replay-nya dulu
+        setTimeout(() => {
+            const slider = document.getElementById('replay-slider');
+            if (slider) {
+                slider.value = frameIndex;
+                ubahDetikReplay(frameIndex); // Langsung pause dan tampilkan frame tersebut
+            }
+        }, 100);
     }
 
     function previewReplayLokal(replayId) {
@@ -511,19 +560,19 @@
         if (maxTimeLbl) maxTimeLbl.innerText = `Total: ${(replay.frames.length / 10).toFixed(1)}s`;
 
         currentFrameIndex = 0;
-        tampilkanFrameReview(currentFrameIndex);
+        tampilkanFrameReviewLokal(currentFrameIndex); 
 
         operatorPreviewInterval = setInterval(() => {
             if (!isPaused) {
                 currentFrameIndex++;
                 if (currentFrameIndex >= replay.frames.length) currentFrameIndex = 0;
-                tampilkanFrameReview(currentFrameIndex);
+                tampilkanFrameReviewLokal(currentFrameIndex); 
                 if (slider) slider.value = currentFrameIndex;
             }
         }, 100);
     }
 
-    function tampilkanFrameReview(idx) {
+    function tampilkanFrameReviewLokal(idx) {
         if (!activeReviewFrames || !activeReviewFrames[idx]) return;
         const frameData = activeReviewFrames[idx];
         
@@ -532,11 +581,20 @@
         
         const curTimeLbl = document.getElementById('lbl-current-time');
         if (curTimeLbl) curTimeLbl.innerText = `${(idx / 10).toFixed(1)}s`;
+    }
 
-        db.ref('var/replay_wasit').update({
-            current_frame: frameData,
-            decision: `REVIEW: DETIK ${(idx / 10).toFixed(1)}s`
-        });
+    function ubahDetikReplay(indexFrame) {
+        if (!activeReviewFrames || activeReviewFrames.length === 0) return;
+        
+        isPaused = true;
+        const btn = document.getElementById('btn-pause-play');
+        if (btn) {
+            btn.innerText = "▶️ Play";
+            btn.style.background = "#16a34a";
+        }
+
+        currentFrameIndex = parseInt(indexFrame);
+        tampilkanFrameReviewLokal(currentFrameIndex);
     }
 
     function togglePausePlay() {
@@ -551,20 +609,6 @@
             btn.innerText = "⏸️ Pause";
             btn.style.background = "#eab308";
         }
-    }
-
-    function ubahDetikReplay(indexFrame) {
-        if (!activeReviewFrames || activeReviewFrames.length === 0) return;
-        
-        isPaused = true;
-        const btn = document.getElementById('btn-pause-play');
-        if (btn) {
-            btn.innerText = "▶️ Play";
-            btn.style.background = "#16a34a";
-        }
-
-        currentFrameIndex = parseInt(indexFrame);
-        tampilkanFrameReview(currentFrameIndex);
     }
 
     function kembaliKeLive() {
@@ -587,46 +631,16 @@
             mainLabel.innerText = "Layar Utama (Live)";
             mainLabel.style.background = "#e11d48";
         }
-        
-        db.ref('var/replay_wasit/decision').set("LIVE MATCH");
-    }
-
-    function renderGaleri() {
-        const container = document.getElementById('replay-container');
-        if (!container) return;
-        container.innerHTML = "";
-        
-        if (savedVideoReplays.length === 0) {
-            container.innerHTML = `<div style="color: #64748b; font-size: 0.8rem;">Belum ada klip tersimpan. Klip otomatis masuk tiap 1 menit (hanya saat kamera aktif).</div>`;
-            return;
-        }
-
-        savedVideoReplays.slice().reverse().forEach((replay) => {
-            const isProtected = (currentReviewId === replay.id);
-            const div = document.createElement('div');
-            div.className = `replay-item ${isProtected ? 'protected' : ''}`;
-            div.innerHTML = `
-                <div>
-                    <strong>${replay.title}</strong><br>
-                    <small style="color:${isProtected ? '#f59e0b' : '#38bdf8'};">Cam ${replay.cam} | 1 Menit ${isProtected ? '🔒 (Direview)' : ''}</small>
-                </div>
-                <div>
-                    <button class="btn-yellow" onclick="previewReplayLokal(${replay.id})">▶️ Lihat</button>
-                    <button class="btn-gray" onclick="kembaliKeLive()">🔴 Live</button>
-                    <button class="btn-blue" onclick="kirimReplayTersimpan(${replay.id})">📺 Kirim Wasit</button>
-                </div>
-            `;
-            container.appendChild(div);
-        });
     }
 
     function kirimReplayTersimpan(replayId) {
         const replay = savedVideoReplays.find(r => r.id === replayId);
         if (replay) {
             previewReplayLokal(replayId);
+            
             db.ref('var/replay_wasit').set({
                 frames: replay.frames,
-                current_frame: replay.frames[0],
+                current_frame: replay.frames[currentFrameIndex] || replay.frames[0],
                 decision: `REVIEW: ${replay.title}`,
                 timestamp: Date.now()
             });
@@ -680,7 +694,7 @@
                 if (data.current_frame) {
                     imgElement.src = data.current_frame;
                     const statusWasit = document.getElementById('status-wasit');
-                    if (statusWasit) statusWasit.innerText = "Status: MENINJAU DETIK TERTENTU ⏱️";
+                    if (statusWasit) statusWasit.innerText = "Status: MENINJAU REPLAY ⏱️";
                 } 
                 else if (data.frames && Array.isArray(data.frames)) {
                     const statusWasit = document.getElementById('status-wasit');
@@ -813,9 +827,18 @@
                         orangTerdeteksi.forEach(orang => {
                             if (cekTumpangTindih(bola, orang)) {
                                 const bolaTengahY = bola[1] + (bola[3] / 2);
+                                const bolaTengahX = bola[0] + (bola[2] / 2);
                                 const bahuPemain = orang[1] + (orang[3] * 0.15); 
                                 const lututPemain = orang[1] + (orang[3] * 0.75); 
-                                if (bolaTengahY > bahuPemain && bolaTengahY < lututPemain) {
+                                
+                                // Deteksi area tepi (Margin 10% dari layar) untuk mengabaikan pemain yang memungut bola out
+                                const areaAmanX = canvas.width * 0.10;
+                                const areaAmanY = canvas.height * 0.90; // Bagian bawah layar
+                                
+                                const isDiTepi = (bolaTengahX < areaAmanX || bolaTengahX > (canvas.width - areaAmanX) || bolaTengahY > areaAmanY);
+
+                                // Hanya hitung handball jika tumpang tindih antara bahu & lutut, DAN BUKAN di tepi layar
+                                if (bolaTengahY > bahuPemain && bolaTengahY < lututPemain && !isDiTepi) {
                                     potensiHandball = true;
                                     ctx.fillStyle = "#f97316";
                                     ctx.beginPath();
@@ -829,15 +852,17 @@
 
                 const now = Date.now();
                 if (now - lastAITrigger > 12000) { 
+                    const currentFrameIndex = camBuffers[activeCam].length > 0 ? camBuffers[activeCam].length - 1 : 0;
+
                     if (potensiGoal) { 
                         lastAITrigger = now; 
-                        simpanKlipOtomatis("⚽ AI REVIEW: POTENSI GOAL", true); 
+                        simpanKlipOtomatis("⚽ AI REVIEW: POTENSI GOAL", true, currentFrameIndex); 
                     } else if (potensiHandball) { 
                         lastAITrigger = now; 
-                        simpanKlipOtomatis("✋ AI REVIEW: POTENSI HANDBALL", true); 
+                        simpanKlipOtomatis("✋ AI REVIEW: POTENSI HANDBALL", true, currentFrameIndex); 
                     } else if (potensiPelanggaran) { 
                         lastAITrigger = now; 
-                        simpanKlipOtomatis("🛑 AI REVIEW: FOUL / KONTAK FISIK", true); 
+                        simpanKlipOtomatis("🛑 AI REVIEW: FOUL / KONTAK FISIK", true, currentFrameIndex); 
                     }
                 }
 
