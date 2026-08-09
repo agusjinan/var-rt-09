@@ -41,7 +41,7 @@
         .btn-green { background: #16a34a; color: white; width: 31%; } .btn-green:hover { background: #15803d; }
         .btn-red { background: #e11d48; color: white; width: 100%; } .btn-red:hover { background: #be123c; }
         .btn-red-half { background: #e11d48; color: white; width: 31%; } .btn-red-half:hover { background: #be123c; }
-        .btn-orange { background: #d97706; color: white; width: 31%; } .btn-orange:hover { background: #b45309; }
+        .btn-orange { background: #d97706; color: white; width: 100%; } .btn-orange:hover { background: #b45309; }
         .btn-yellow { background: #eab308; color: black; width: 48%; } .btn-yellow:hover { background: #ca8a04; color: white; }
         .btn-gray { background: #475569; color: white; width: 48%; } .btn-gray:hover { background: #334155; }
         
@@ -67,9 +67,10 @@
         .time-slider { width: 100%; accent-color: #38bdf8; cursor: pointer; }
         .time-info { display: flex; justify-content: space-between; font-size: 0.85rem; color: #38bdf8; margin-top: 5px; font-weight: bold;}
 
-        .replay-list { background: #0f172a; padding: 12px; border-radius: 8px; text-align: left; margin-top: 15px; border: 1px solid #334155; max-height: 250px; overflow-y: auto;}
-        .replay-item { background: #1e293b; padding: 10px; margin-bottom: 8px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #10b981;}
+        .replay-list { background: #0f172a; padding: 12px; border-radius: 8px; text-align: left; margin-top: 15px; border: 1px solid #334155; max-height: 350px; overflow-y: auto;}
+        .replay-item { background: #1e293b; padding: 10px; margin-bottom: 8px; border-radius: 6px; border-left: 4px solid #10b981;}
         .replay-item.protected { border-left-color: #f59e0b; background: #262f45; }
+        .replay-item-actions { display: flex; justify-content: space-between; margin-top: 8px;}
         .replay-item button { padding: 6px 8px; font-size: 0.75rem; margin: 0 2px;}
 
         .var-overlay { position: absolute; bottom: 10%; left: 0; width: 100%; text-align: center; pointer-events: none; z-index: 10;}
@@ -86,7 +87,7 @@
     <div id="menu" class="card">
         <h3>Pilih Perangkat</h3>
         <button class="btn-blue" onclick="pilihPeran('kamera')">📱 Kamera Lapangan (HP)</button>
-        <button class="btn-blue" onclick="pilihPeran('operator')">🎛️ Ruang Kontrol & AI Desktop (Fullscreen)</button>
+        <button class="btn-blue" onclick="pilihPeran('operator')">🎛️ Ruang Kontrol & AI Desktop</button>
         <button class="btn-blue" onclick="pilihPeran('wasit')">📺 Monitor Wasit (Clean Broadcast)</button>
     </div>
 
@@ -100,13 +101,13 @@
         </select>
         <div class="video-box"><video id="webcam" autoplay playsinline muted></video></div>
         <br>
-        <button class="btn-green" style="width:100%; margin-bottom: 5px;" onclick="mulaiKamera()">🟢 Mulai Live Stream (HD)</button>
+        <button class="btn-green" style="width:100%; margin-bottom: 5px;" onclick="mulaiKamera()">🟢 Mulai Live Stream</button>
         <button class="btn-red" style="margin-bottom: 5px;" onclick="hentikanKamera()">⏹️ Matikan Stream</button>
         <button class="btn-gray" style="width:100%;" onclick="tukarKamera()">🔄 Ganti Kamera</button>
         <div id="status-cam" class="status-badge">Status: Menunggu...</div>
     </div>
 
-    <!-- PANEL KONTROL WASIT -->
+    <!-- PANEL KONTROL OPERATOR -->
     <div id="panel-operator" class="hidden" style="width: 100%;">
         <div class="desktop-control-layout">
             
@@ -142,7 +143,7 @@
                     <input type="range" id="replay-slider" class="time-slider" min="0" max="100" value="0" oninput="ubahDetikReplay(this.value)">
                     <div class="time-info">
                         <span id="lbl-current-time">0.0s</span>
-                        <span id="lbl-max-time">Total: 60.0s (1 Menit)</span>
+                        <span id="lbl-max-time">Total: Waktu Klip</span>
                     </div>
                 </div>
 
@@ -166,21 +167,40 @@
                     <div class="status-badge" style="background:#10b981; margin-bottom:10px;">Controlled Send Active ⚡</div>
 
                     <div class="replay-list">
-                        <h4 style="margin:0 0 10px 0; color:#94a3b8;">📼 Bank Replay Otomatis (1 Menit)</h4>
+                        <h4 style="margin:0 0 10px 0; color:#94a3b8;">📼 Bank Replay Otomatis</h4>
                         <div id="replay-container">
-                            <div style="color: #64748b; font-size: 0.8rem;">Menyiapkan klip otomatis pertama...</div>
+                            <div style="color: #64748b; font-size: 0.8rem;">Menyiapkan klip otomatis...</div>
                         </div>
                     </div>
                 </div>
 
+                <!-- Sistem Tagging Pemain -->
+                <div class="replay-list" style="margin-top: 15px; border-color: #facc15;">
+                    <h4 style="margin:0 0 10px 0; color:#facc15;">⚠️ Catat Pelanggaran Pemain</h4>
+                    
+                    <div style="display: flex; gap: 5px; margin-bottom: 10px;">
+                        <input type="text" id="input-nama-pemain" placeholder="Nama / No Punggung" style="width: 70%; padding: 8px; border-radius: 6px; border: 1px solid #475569; background: #334155; color: white;">
+                        <button class="btn-blue" style="width: 30%;" onclick="tambahPemain()">+ Tambah</button>
+                    </div>
+
+                    <select id="pilih-pemain" style="background: #1e293b; border-color: #38bdf8;">
+                        <option value="">-- Pilih Pemain yang Melanggar --</option>
+                    </select>
+
+                    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; margin-top: 10px;">
+                        <button class="btn-yellow" onclick="kirimKeputusanManual('🟨 KARTU KUNING', true)">🟨 KUNING</button>
+                        <button class="btn-red" style="width: 48%" onclick="kirimKeputusanManual('🟥 KARTU MERAH', true)">🟥 MERAH</button>
+                    </div>
+                </div>
+
                 <div class="replay-list" style="margin-top: 15px;">
-                    <h4 style="margin:0 0 10px 0; color:#94a3b8;">Kirim Keputusan Akhir ke Wasit</h4>
+                    <h4 style="margin:0 0 10px 0; color:#94a3b8;">Keputusan Reguler (Tanpa Kartu)</h4>
                     <div style="display: flex; flex-wrap: wrap; justify-content: space-between;">
-                        <button class="btn-green" onclick="kirimKeputusanManual('⚽ DECISION: GOAL')">⚽ GOAL</button>
-                        <button class="btn-red-half" onclick="kirimKeputusanManual('❌ DECISION: NO GOAL')">❌ NO GOAL</button>
-                        <button class="btn-orange" onclick="kirimKeputusanManual('🛑 DECISION: FOUL')">🛑 FOUL</button>
-                        <button class="btn-yellow" onclick="kirimKeputusanManual('✋ DECISION: HANDBALL')">✋ HANDBALL</button>
-                        <button class="btn-gray" onclick="kirimKeputusanManual('✅ DECISION: PLAY ON')">✅ PLAY ON</button>
+                        <button class="btn-green" onclick="kirimKeputusanManual('⚽ DECISION: GOAL', false)">⚽ GOAL</button>
+                        <button class="btn-red-half" onclick="kirimKeputusanManual('❌ DECISION: NO GOAL', false)">❌ NO GOAL</button>
+                        <button class="btn-orange" onclick="kirimKeputusanManual('🛑 DECISION: FOUL', false)">🛑 FOUL</button>
+                        <button class="btn-yellow" onclick="kirimKeputusanManual('✋ DECISION: HANDBALL', false)">✋ HANDBALL</button>
+                        <button class="btn-gray" onclick="kirimKeputusanManual('✅ DECISION: PLAY ON', false)">✅ PLAY ON</button>
                     </div>
                 </div>
             </div>
@@ -218,15 +238,21 @@
     let modelAI = null, isAIActive = false;
     let activeCam = 1; 
 
-    const ONE_MIN_FRAMES = 600; 
+    // Kamera merekam setiap 50ms (20 Frame per Detik)
+    const FPS = 20; 
+    const MAX_FRAMES = 600; // Menyimpan 30 detik (600 frame / 20fps)
+    
     const camBuffers = { 1: [], 2: [], 3: [] }; 
     const camActiveStatus = { 1: false, 2: false, 3: false }; 
     let savedVideoReplays = []; 
     let operatorPreviewInterval = null;
     let currentReviewId = null; 
     let activeReviewFrames = []; 
+    
     let isPaused = false;
     let currentFrameIndex = 0;
+    let isCrucialPlay = false; // Flag untuk Jendela 3 Detik
+    let crucialEndIndex = 0;
     
     let zoomScale = 1;
     let panX = 0, panY = 0;
@@ -235,6 +261,45 @@
     let lastAITrigger = 0;
     let lastAIDetectTime = 0;
     const AI_INTERVAL_MS = 100;
+
+    // === DATABASE PEMAIN ===
+    let daftarPemain = ["Pemain A (10)", "Kiper (1)"];
+
+    function updateDropdownPemain() {
+        const select = document.getElementById('pilih-pemain');
+        if (!select) return;
+        select.innerHTML = '<option value="">-- Pilih Pemain yang Melanggar --</option>';
+        daftarPemain.forEach(pemain => {
+            const opt = document.createElement('option');
+            opt.value = pemain;
+            opt.innerText = pemain;
+            select.appendChild(opt);
+        });
+    }
+
+    function tambahPemain() {
+        const input = document.getElementById('input-nama-pemain');
+        const nama = input.value.trim();
+        if (nama) {
+            daftarPemain.push(nama);
+            updateDropdownPemain();
+            input.value = "";
+            alert(`${nama} ditambahkan!`);
+        }
+    }
+    updateDropdownPemain();
+
+    // === FUNGSI TEXT TO SPEECH (VOICE ALERT) ===
+    function bicaraAI(teks) {
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel(); // hentikan suara sebelumnya
+            const suara = new SpeechSynthesisUtterance(teks);
+            suara.lang = 'id-ID'; // Bahasa Indonesia
+            suara.rate = 1.2;
+            suara.pitch = 1.1;
+            window.speechSynthesis.speak(suara);
+        }
+    }
 
     function playBeep() {
         try {
@@ -252,6 +317,12 @@
     }
 
     function pilihPeran(peran) {
+        // Unlock Audio Context untuk Voice AI di browser
+        if ('speechSynthesis' in window) {
+            let msg = new SpeechSynthesisUtterance('');
+            window.speechSynthesis.speak(msg);
+        }
+
         const menuEl = document.getElementById('menu');
         if (menuEl) menuEl.classList.add('hidden');
         
@@ -261,7 +332,6 @@
         if (peran === 'operator') { 
             bacaMultiStream(); 
             mulaiAutoAI(); 
-            mulaiAutoSatuMenitTimer(); 
             inisialisasiZoomPan();
         }
         else if (peran === 'wasit') { 
@@ -292,9 +362,8 @@
 
         wrapper.addEventListener('wheel', (e) => {
             e.preventDefault();
-            if (e.deltaY < 0) {
-                zoomScale = Math.min(zoomScale + 0.25, 4);
-            } else {
+            if (e.deltaY < 0) { zoomScale = Math.min(zoomScale + 0.25, 4); } 
+            else {
                 zoomScale = Math.max(zoomScale - 0.25, 1);
                 if (zoomScale === 1) { panX = 0; panY = 0; }
             }
@@ -307,29 +376,19 @@
         if (scale === 1) { panX = 0; panY = 0; }
         updateTransformImg();
     }
-
-    function resetZoom() {
-        zoomScale = 1;
-        panX = 0;
-        panY = 0;
-        updateTransformImg();
-    }
+    function resetZoom() { ubahZoom(1); }
 
     function updateTransformImg() {
         const img = document.getElementById('stream-main');
-        if (img) {
-            img.style.transform = `translate(${panX}px, ${panY}px) scale(${zoomScale})`;
-        }
+        if (img) img.style.transform = `translate(${panX}px, ${panY}px) scale(${zoomScale})`;
     }
 
     async function mulaiKamera() {
         const video = document.getElementById('webcam');
         const camIdSelect = document.getElementById('cam-id');
         const statusCam = document.getElementById('status-cam');
-        
         if (!video || !camIdSelect) return;
         const camId = camIdSelect.value;
-        
         hentikanKameraLokal();
         
         const mode = isFacingUser ? "user" : "environment";
@@ -343,18 +402,16 @@
 
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
-            canvas.width = 640;  
-            canvas.height = 360;
+            canvas.width = 640; canvas.height = 360;
 
             let isSending = false;
+            // Capture setiap 50ms = 20 FPS
             cameraInterval = setInterval(async () => {
                 if (video.readyState === video.HAVE_ENOUGH_DATA && !isSending) {
                     isSending = true;
                     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                     const frameData = canvas.toDataURL('image/jpeg', 0.7); 
-                    try {
-                        await db.ref(`var/cam_${camId}`).set(frameData);
-                    } catch (e) {} finally { isSending = false; }
+                    try { await db.ref(`var/cam_${camId}`).set(frameData); } catch (e) {} finally { isSending = false; }
                 }
             }, 50); 
         } catch (err) { alert("Gagal Akses Kamera HD!"); }
@@ -372,18 +429,11 @@
 
     function hentikanKamera() {
         hentikanKameraLokal();
-        const statusCam = document.getElementById('status-cam');
-        if (statusCam) statusCam.innerText = "Status: Stream Dimatikan ⏹️";
-        const camIdSelect = document.getElementById('cam-id');
-        if (camIdSelect) {
-            db.ref(`var/cam_${camIdSelect.value}`).set(""); 
-        }
+        document.getElementById('status-cam').innerText = "Status: Stream Dimatikan ⏹️";
+        db.ref(`var/cam_${document.getElementById('cam-id').value}`).set(""); 
     }
 
-    function tukarKamera() { 
-        isFacingUser = !isFacingUser; 
-        if(currentStream) mulaiKamera(); 
-    }
+    function tukarKamera() { isFacingUser = !isFacingUser; if(currentStream) mulaiKamera(); }
 
     function bacaMultiStream() {
         [1, 2, 3].forEach(id => {
@@ -391,91 +441,68 @@
                 const data = snapshot.val();
                 if (data) {
                     camActiveStatus[id] = true; 
-                    const thumbImg = document.getElementById(`stream-cam${id}`);
-                    if(thumbImg) thumbImg.src = data;
+                    document.getElementById(`stream-cam${id}`).src = data;
 
                     if (activeCam === id && !currentReviewId) {
-                        const mainImg = document.getElementById('stream-main');
-                        if(mainImg) mainImg.src = data;
+                        document.getElementById('stream-main').src = data;
                     }
                     
                     camBuffers[id].push(data);
-                    if (camBuffers[id].length > ONE_MIN_FRAMES) camBuffers[id].shift(); 
+                    if (camBuffers[id].length > MAX_FRAMES) camBuffers[id].shift(); 
                 } else {
                     camActiveStatus[id] = false; 
-                    const thumbImg = document.getElementById(`stream-cam${id}`);
-                    if(thumbImg) thumbImg.removeAttribute('src');
-                    if (activeCam === id && !currentReviewId) {
-                        const mainImg = document.getElementById('stream-main');
-                        if(mainImg) mainImg.removeAttribute('src');
-                    }
+                    document.getElementById(`stream-cam${id}`).removeAttribute('src');
+                    if (activeCam === id && !currentReviewId) document.getElementById('stream-main').removeAttribute('src');
                 }
             });
         });
     }
 
     function setMainCam(id) {
-        if (currentReviewId) {
-            alert("Selesaikan review atau kembali ke Live terlebih dahulu sebelum mengganti kamera utama.");
-            return;
-        }
-
+        if (currentReviewId) { alert("Selesaikan review terlebih dahulu."); return; }
         activeCam = id;
         document.querySelectorAll('.cam-thumb').forEach(el => el.classList.remove('active'));
-        const thumb = document.getElementById(`thumb-${id}`);
-        if (thumb) thumb.classList.add('active');
-        
+        document.getElementById(`thumb-${id}`).classList.add('active');
         const canvas = document.getElementById('canvas-ai');
-        if (canvas) {
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-        }
+        canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
     }
 
-    function mulaiAutoSatuMenitTimer() {
-        setInterval(() => {
-            if (!camActiveStatus[activeCam]) return;
-            if (camBuffers[activeCam].length >= 30) {
-                simpanKlipOtomatis(`Klip Otomatis (${new Date().toLocaleTimeString()})`, false);
-            }
-        }, 60000); 
-    }
-
+    // Fungsi menyimpan klip beserta waktu kejadian
     function simpanKlipOtomatis(judul, playSound = true, highlightIndex = -1) {
         if (!camActiveStatus[activeCam] || camBuffers[activeCam].length < 10) return;
         
         const idUnik = Date.now();
         const frameCopy = [...camBuffers[activeCam]]; 
-        
-        // Jika AI tidak mengirim index, gunakan frame terakhir saat klip disimpan
         const targetIndex = highlightIndex !== -1 ? highlightIndex : (frameCopy.length - 1);
+        
+        // Buat Jendela 3 Detik: 1 detik sebelum (20 frame) sampai 1 detik sesudah (20 frame)
+        const startHighlight = Math.max(0, targetIndex - FPS);
+        const endHighlight = Math.min(frameCopy.length - 1, targetIndex + FPS);
         
         savedVideoReplays.push({ 
             id: idUnik, 
             title: judul, 
             cam: activeCam, 
             frames: frameCopy, 
-            highlightIndex: targetIndex, // Menyimpan titik kejadian
+            highlightIndex: targetIndex, 
+            startHighlight: startHighlight,
+            endHighlight: endHighlight,
             createdAt: Date.now() 
         });
         
         renderGaleri();
         if (playSound) playBeep();
 
-        setTimeout(() => {
-            cekDanHapusKlip(idUnik);
-        }, 300000); 
+        setTimeout(() => { cekDanHapusKlip(idUnik); }, 300000); 
     }
 
     function cekDanHapusKlip(idUnik) {
         const targetKlip = savedVideoReplays.find(item => item.id === idUnik);
         if (!targetKlip) return;
-
         if (currentReviewId === idUnik) {
             setTimeout(() => cekDanHapusKlip(idUnik), 60000);
             return;
         }
-
         savedVideoReplays = savedVideoReplays.filter(item => item.id !== idUnik);
         renderGaleri();
     }
@@ -486,26 +513,31 @@
         container.innerHTML = "";
         
         if (savedVideoReplays.length === 0) {
-            container.innerHTML = `<div style="color: #64748b; font-size: 0.8rem;">Belum ada klip tersimpan. Klip otomatis masuk tiap 1 menit (hanya saat kamera aktif).</div>`;
+            container.innerHTML = `<div style="color: #64748b; font-size: 0.8rem;">Belum ada klip tersimpan.</div>`;
             return;
         }
 
         savedVideoReplays.slice().reverse().forEach((replay) => {
             const isProtected = (currentReviewId === replay.id);
-            // Hitung detik (asumsi 10 frame per detik berdasarkan slider Anda)
-            const detikKejadian = replay.highlightIndex ? (replay.highlightIndex / 10).toFixed(1) : 0;
+            
+            // Konversi Frame ke Detik Realtime (FPS = 20)
+            const detikPuncak = (replay.highlightIndex / FPS).toFixed(1);
+            const detikStart = (replay.startHighlight / FPS).toFixed(1);
+            const detikEnd = (replay.endHighlight / FPS).toFixed(1);
             
             const div = document.createElement('div');
             div.className = `replay-item ${isProtected ? 'protected' : ''}`;
             div.innerHTML = `
                 <div>
                     <strong>${replay.title}</strong><br>
-                    <small style="color:${isProtected ? '#f59e0b' : '#38bdf8'};">Cam ${replay.cam} | 1 Menit ${isProtected ? '🔒 (Direview)' : ''}</small>
-                    ${replay.highlightIndex > 0 ? `<br><span style="color:#facc15; font-size:0.75rem; font-weight:bold;">⚡ Kejadian di: ${detikKejadian}s</span>` : ''}
+                    <small style="color:${isProtected ? '#f59e0b' : '#38bdf8'};">Cam ${replay.cam} ${isProtected ? '🔒 (Direview)' : ''}</small>
+                    ${replay.highlightIndex > 0 ? `<br><span style="color:#facc15; font-size:0.75rem; font-weight:bold;">⚡ Area Kejadian: ${detikStart}s - ${detikEnd}s (Puncak: ${detikPuncak}s)</span>` : ''}
                 </div>
-                <div>
-                    ${replay.highlightIndex > 0 ? `<button class="btn-orange" onclick="lompatKeKejadian(${replay.id}, ${replay.highlightIndex})">⏱️ Cek Kejadian</button>` : ''}
-                    <button class="btn-yellow" onclick="previewReplayLokal(${replay.id})">▶️ Lihat</button>
+                <div class="replay-item-actions">
+                    ${replay.highlightIndex > 0 ? `<button class="btn-orange" style="flex-grow:1; margin-right:4px;" onclick="putarKejadian3Detik(${replay.id})">⏱️ Putar 3 Detik Kejadian</button>` : ''}
+                </div>
+                <div class="replay-item-actions" style="margin-top: 4px;">
+                    <button class="btn-yellow" onclick="previewReplayLokal(${replay.id})">▶️ Lihat Full</button>
                     <button class="btn-gray" onclick="kembaliKeLive()">🔴 Live</button>
                     <button class="btn-blue" onclick="kirimReplayTersimpan(${replay.id})">📺 Kirim Wasit</button>
                 </div>
@@ -514,15 +546,29 @@
         });
     }
 
-    function lompatKeKejadian(replayId, frameIndex) {
-        previewReplayLokal(replayId); // Buka replay-nya dulu
+    // Fungsi Super Pintar: Memutar tepat 3 detik area kejadian (Slow Motion)
+    function putarKejadian3Detik(replayId) {
+        const replay = savedVideoReplays.find(r => r.id === replayId);
+        if (!replay) return;
+
+        previewReplayLokal(replayId); // Load replay ke layar
+        
         setTimeout(() => {
+            isPaused = false;
+            isCrucialPlay = true; // Aktifkan mode Jendela 3 Detik
+            crucialEndIndex = replay.endHighlight;
+            
+            // Lompat ke 1 detik sebelum kejadian
+            currentFrameIndex = replay.startHighlight;
             const slider = document.getElementById('replay-slider');
-            if (slider) {
-                slider.value = frameIndex;
-                ubahDetikReplay(frameIndex); // Langsung pause dan tampilkan frame tersebut
+            if(slider) slider.value = currentFrameIndex;
+
+            const btn = document.getElementById('btn-pause-play');
+            if (btn) {
+                btn.innerText = "⏸️ Pause";
+                btn.style.background = "#eab308";
             }
-        }, 100);
+        }, 50);
     }
 
     function previewReplayLokal(replayId) {
@@ -532,40 +578,39 @@
         currentReviewId = replayId; 
         activeReviewFrames = replay.frames;
         isPaused = false;
+        isCrucialPlay = false; // Reset mode krusial
         
         const btnPause = document.getElementById('btn-pause-play');
-        if (btnPause) {
-            btnPause.innerText = "⏸️ Pause";
-            btnPause.style.background = "#eab308";
-        }
+        if (btnPause) { btnPause.innerText = "⏸️ Pause"; btnPause.style.background = "#eab308"; }
         renderGaleri();
 
         if (operatorPreviewInterval) clearInterval(operatorPreviewInterval);
 
-        const mainLabel = document.getElementById('main-label');
-        if (mainLabel) {
-            mainLabel.innerText = `Sedang Review (${replay.title})`;
-            mainLabel.style.background = "#f59e0b";
-        }
+        document.getElementById('main-label').innerText = `Sedang Review (${replay.title})`;
+        document.getElementById('main-label').style.background = "#f59e0b";
 
         const slider = document.getElementById('replay-slider');
-        if (slider) {
-            slider.max = replay.frames.length - 1;
-            slider.value = 0;
-        }
-        const scrubberBox = document.getElementById('scrubber-box');
-        if (scrubberBox) scrubberBox.classList.add('active');
-        
-        const maxTimeLbl = document.getElementById('lbl-max-time');
-        if (maxTimeLbl) maxTimeLbl.innerText = `Total: ${(replay.frames.length / 10).toFixed(1)}s`;
+        if (slider) { slider.max = replay.frames.length - 1; slider.value = 0; }
+        document.getElementById('scrubber-box').classList.add('active');
+        document.getElementById('lbl-max-time').innerText = `Total: ${(replay.frames.length / FPS).toFixed(1)}s`;
 
         currentFrameIndex = 0;
         tampilkanFrameReviewLokal(currentFrameIndex); 
 
+        // Playback Slow Motion (Diputar tiap 100ms padahal direkam tiap 50ms)
         operatorPreviewInterval = setInterval(() => {
             if (!isPaused) {
                 currentFrameIndex++;
-                if (currentFrameIndex >= replay.frames.length) currentFrameIndex = 0;
+                
+                // Cek jika sedang mode putar krusial 3 detik
+                if (isCrucialPlay && currentFrameIndex >= crucialEndIndex) {
+                    isPaused = true;
+                    isCrucialPlay = false;
+                    if (btnPause) { btnPause.innerText = "▶️ Play"; btnPause.style.background = "#16a34a"; }
+                } else if (currentFrameIndex >= replay.frames.length) {
+                    currentFrameIndex = 0;
+                }
+                
                 tampilkanFrameReviewLokal(currentFrameIndex); 
                 if (slider) slider.value = currentFrameIndex;
             }
@@ -574,24 +619,17 @@
 
     function tampilkanFrameReviewLokal(idx) {
         if (!activeReviewFrames || !activeReviewFrames[idx]) return;
-        const frameData = activeReviewFrames[idx];
-        
-        const mainImg = document.getElementById('stream-main');
-        if (mainImg) mainImg.src = frameData;
-        
-        const curTimeLbl = document.getElementById('lbl-current-time');
-        if (curTimeLbl) curTimeLbl.innerText = `${(idx / 10).toFixed(1)}s`;
+        document.getElementById('stream-main').src = activeReviewFrames[idx];
+        document.getElementById('lbl-current-time').innerText = `${(idx / FPS).toFixed(1)}s`;
     }
 
     function ubahDetikReplay(indexFrame) {
         if (!activeReviewFrames || activeReviewFrames.length === 0) return;
-        
         isPaused = true;
+        isCrucialPlay = false; // Batalkan mode krusial jika digeser manual
+        
         const btn = document.getElementById('btn-pause-play');
-        if (btn) {
-            btn.innerText = "▶️ Play";
-            btn.style.background = "#16a34a";
-        }
+        if (btn) { btn.innerText = "▶️ Play"; btn.style.background = "#16a34a"; }
 
         currentFrameIndex = parseInt(indexFrame);
         tampilkanFrameReviewLokal(currentFrameIndex);
@@ -600,77 +638,57 @@
     function togglePausePlay() {
         if (!currentReviewId) return;
         isPaused = !isPaused;
+        isCrucialPlay = false; // Batalkan mode otomatis krusial
+        
         const btn = document.getElementById('btn-pause-play');
-        if (!btn) return;
-        if (isPaused) {
-            btn.innerText = "▶️ Play";
-            btn.style.background = "#16a34a";
-        } else {
-            btn.innerText = "⏸️ Pause";
-            btn.style.background = "#eab308";
-        }
+        if (isPaused) { btn.innerText = "▶️ Play"; btn.style.background = "#16a34a"; } 
+        else { btn.innerText = "⏸️ Pause"; btn.style.background = "#eab308"; }
     }
 
     function kembaliKeLive() {
-        if (operatorPreviewInterval) {
-            clearInterval(operatorPreviewInterval);
-            operatorPreviewInterval = null;
-        }
-        currentReviewId = null; 
-        activeReviewFrames = [];
-        isPaused = false;
+        if (operatorPreviewInterval) { clearInterval(operatorPreviewInterval); operatorPreviewInterval = null; }
+        currentReviewId = null; activeReviewFrames = [];
+        isPaused = false; isCrucialPlay = false;
         resetZoom();
-        
-        const scrubberBox = document.getElementById('scrubber-box');
-        if (scrubberBox) scrubberBox.classList.remove('active');
-        
+        document.getElementById('scrubber-box').classList.remove('active');
         renderGaleri();
-        
-        const mainLabel = document.getElementById('main-label');
-        if (mainLabel) {
-            mainLabel.innerText = "Layar Utama (Live)";
-            mainLabel.style.background = "#e11d48";
-        }
+        document.getElementById('main-label').innerText = "Layar Utama (Live)";
+        document.getElementById('main-label').style.background = "#e11d48";
     }
 
     function kirimReplayTersimpan(replayId) {
         const replay = savedVideoReplays.find(r => r.id === replayId);
         if (replay) {
             previewReplayLokal(replayId);
-            
             db.ref('var/replay_wasit').set({
                 frames: replay.frames,
                 current_frame: replay.frames[currentFrameIndex] || replay.frames[0],
                 decision: `REVIEW: ${replay.title}`,
                 timestamp: Date.now()
             });
-
-            alert("Klip Replay berhasil dikirim ke Monitor Wasit!");
+            alert("Klip Replay dikirim ke Wasit!");
         }
     }
 
-    function kirimKeputusanManual(keputusanTeks) {
-        db.ref('var/replay_wasit/decision').set(keputusanTeks);
+    // Fungsi Kirim Keputusan (Mendukung Tagging Pemain)
+    function kirimKeputusanManual(keputusanTeks, pakaiTagPemain) {
+        let finalTeks = keputusanTeks;
+        
+        if (pakaiTagPemain) {
+            const pemain = document.getElementById('pilih-pemain').value;
+            if (!pemain) { alert("Pilih nama pemain dari Dropdown terlebih dahulu!"); return; }
+            finalTeks = `${keputusanTeks} - ${pemain}`;
+        }
+
+        db.ref('var/replay_wasit/decision').set(finalTeks);
 
         if (currentReviewId) {
             savedVideoReplays = savedVideoReplays.filter(item => item.id !== currentReviewId);
-            currentReviewId = null;
-            activeReviewFrames = [];
-            
-            const scrubberBox = document.getElementById('scrubber-box');
-            if (scrubberBox) scrubberBox.classList.remove('active');
-            
-            renderGaleri();
-            resetZoom();
-            
-            const mainLabel = document.getElementById('main-label');
-            if (mainLabel) {
-                mainLabel.innerText = "Layar Utama (Live)";
-                mainLabel.style.background = "#e11d48";
-            }
+            kembaliKeLive();
         }
 
-        alert(`Keputusan [${keputusanTeks}] dikirim ke wasit, klip dihapus, dan sistem kembali ke Live!`);
+        alert(`Keputusan [${finalTeks}] dikirim!`);
+        document.getElementById('pilih-pemain').value = ""; 
     }
 
     let wasitPlayInterval = null;
@@ -687,18 +705,16 @@
                 overlay.style.display = "block";
 
                 if(data.decision.includes("GOAL") && !data.decision.includes("NO GOAL")) textDecision.style.borderColor = "#16a34a";
-                else if(data.decision.includes("HANDBALL")) textDecision.style.borderColor = "#eab308";
-                else if(data.decision.includes("FOUL") || data.decision.includes("NO GOAL")) textDecision.style.borderColor = "#e11d48";
+                else if(data.decision.includes("HANDBALL") || data.decision.includes("KUNING")) textDecision.style.borderColor = "#eab308";
+                else if(data.decision.includes("FOUL") || data.decision.includes("MERAH") || data.decision.includes("NO GOAL")) textDecision.style.borderColor = "#e11d48";
                 else textDecision.style.borderColor = "#fff";
 
                 if (data.current_frame) {
                     imgElement.src = data.current_frame;
-                    const statusWasit = document.getElementById('status-wasit');
-                    if (statusWasit) statusWasit.innerText = "Status: MENINJAU REPLAY ⏱️";
+                    document.getElementById('status-wasit').innerText = "Status: MENINJAU REPLAY ⏱️";
                 } 
                 else if (data.frames && Array.isArray(data.frames)) {
-                    const statusWasit = document.getElementById('status-wasit');
-                    if (statusWasit) statusWasit.innerText = "Status: MEMUTAR REPLAY HD ⏪";
+                    document.getElementById('status-wasit').innerText = "Status: MEMUTAR REPLAY HD ⏪";
                     if (wasitPlayInterval) clearInterval(wasitPlayInterval);
                     let i = 0;
                     wasitPlayInterval = setInterval(() => {
@@ -713,14 +729,14 @@
 
     async function mulaiAutoAI() {
         const statusAI = document.getElementById('status-ai');
-        if (statusAI) statusAI.innerText = "AI: Memuat Model ⏳";
+        statusAI.innerText = "AI: Memuat Model ⏳";
         try {
             if (!modelAI) modelAI = await cocoSsd.load();
             isAIActive = true;
-            if (statusAI) statusAI.innerText = "Multi-AI System Normal 🟢";
+            statusAI.innerText = "Multi-AI System Normal 🟢";
             requestAnimationFrame(jalankanDeteksiAI); 
         } catch (error) { 
-            if (statusAI) statusAI.innerText = "AI: Mode Offline / Siap 🟢"; 
+            statusAI.innerText = "AI: Mode Offline / Siap 🟢"; 
             isAIActive = true;
         }
     }
@@ -733,40 +749,27 @@
 
     async function jalankanDeteksiAI(timestamp) {
         if (!isAIActive) return;
-
-        if (timestamp - lastAIDetectTime < AI_INTERVAL_MS) {
-            requestAnimationFrame(jalankanDeteksiAI);
-            return;
-        }
+        if (timestamp - lastAIDetectTime < AI_INTERVAL_MS) { requestAnimationFrame(jalankanDeteksiAI); return; }
         lastAIDetectTime = timestamp;
 
         if (!camActiveStatus[activeCam]) {
             const canvas = document.getElementById('canvas-ai');
-            if (canvas) {
-                const ctx = canvas.getContext('2d');
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-            }
-            requestAnimationFrame(jalankanDeteksiAI);
-            return;
+            if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+            requestAnimationFrame(jalankanDeteksiAI); return;
         }
 
         const img = document.getElementById('stream-main');
         const canvas = document.getElementById('canvas-ai');
-        if (!canvas || !img) {
-            requestAnimationFrame(jalankanDeteksiAI);
-            return;
-        }
+        if (!canvas || !img) { requestAnimationFrame(jalankanDeteksiAI); return; }
         const ctx = canvas.getContext('2d');
 
         if (currentReviewId) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            requestAnimationFrame(jalankanDeteksiAI);
-            return;
+            requestAnimationFrame(jalankanDeteksiAI); return;
         }
 
         if (img.complete && img.naturalWidth !== 0 && img.src && modelAI) {
-            canvas.width = img.clientWidth; 
-            canvas.height = img.clientHeight;
+            canvas.width = img.clientWidth; canvas.height = img.clientHeight;
 
             try {
                 const predictions = await modelAI.detect(img);
@@ -787,21 +790,13 @@
 
                         if (pred.class === 'person') {
                             orangTerdeteksi.push(scaledBox);
-                            ctx.fillStyle = "#38bdf8";
-                            ctx.beginPath();
-                            ctx.arc(centerX, scaledBox[1] + 5, 4, 0, 2 * Math.PI);
-                            ctx.fill();
+                            ctx.fillStyle = "#38bdf8"; ctx.beginPath(); ctx.arc(centerX, scaledBox[1] + 5, 4, 0, 2 * Math.PI); ctx.fill();
                         } else if (pred.class === 'sports ball') {
                             bolaTerdeteksi.push(scaledBox);
-                            ctx.fillStyle = "#facc15";
-                            ctx.beginPath();
-                            ctx.arc(centerX, centerY, 6, 0, 2 * Math.PI);
-                            ctx.fill();
+                            ctx.fillStyle = "#facc15"; ctx.beginPath(); ctx.arc(centerX, centerY, 6, 0, 2 * Math.PI); ctx.fill();
 
                             const centerBola = scaledBox[0] + (scaledBox[2] / 2);
-                            if (centerBola < (canvas.width * 0.08) || centerBola > (canvas.width * 0.92)) {
-                                potensiGoal = true;
-                            }
+                            if (centerBola < (canvas.width * 0.08) || centerBola > (canvas.width * 0.92)) potensiGoal = true;
                         }
                     }
                 });
@@ -813,10 +808,7 @@
                                 potensiPelanggaran = true;
                                 const midX = (orangTerdeteksi[i][0] + orangTerdeteksi[j][0]) / 2;
                                 const midY = (orangTerdeteksi[i][1] + orangTerdeteksi[j][1]) / 2;
-                                ctx.fillStyle = "#ef4444";
-                                ctx.beginPath();
-                                ctx.arc(midX, midY, 9, 0, 2 * Math.PI);
-                                ctx.fill();
+                                ctx.fillStyle = "#ef4444"; ctx.beginPath(); ctx.arc(midX, midY, 9, 0, 2 * Math.PI); ctx.fill();
                             }
                         }
                     }
@@ -831,19 +823,13 @@
                                 const bahuPemain = orang[1] + (orang[3] * 0.15); 
                                 const lututPemain = orang[1] + (orang[3] * 0.75); 
                                 
-                                // Deteksi area tepi (Margin 10% dari layar) untuk mengabaikan pemain yang memungut bola out
                                 const areaAmanX = canvas.width * 0.10;
-                                const areaAmanY = canvas.height * 0.90; // Bagian bawah layar
-                                
+                                const areaAmanY = canvas.height * 0.90; 
                                 const isDiTepi = (bolaTengahX < areaAmanX || bolaTengahX > (canvas.width - areaAmanX) || bolaTengahY > areaAmanY);
 
-                                // Hanya hitung handball jika tumpang tindih antara bahu & lutut, DAN BUKAN di tepi layar
                                 if (bolaTengahY > bahuPemain && bolaTengahY < lututPemain && !isDiTepi) {
                                     potensiHandball = true;
-                                    ctx.fillStyle = "#f97316";
-                                    ctx.beginPath();
-                                    ctx.arc(bola[0], bola[1], 8, 0, 2 * Math.PI);
-                                    ctx.fill();
+                                    ctx.fillStyle = "#f97316"; ctx.beginPath(); ctx.arc(bola[0], bola[1], 8, 0, 2 * Math.PI); ctx.fill();
                                 }
                             }
                         });
@@ -856,13 +842,16 @@
 
                     if (potensiGoal) { 
                         lastAITrigger = now; 
+                        bicaraAI("Peringatan, Potensi Gol!"); // Voice AI
                         simpanKlipOtomatis("⚽ AI REVIEW: POTENSI GOAL", true, currentFrameIndex); 
                     } else if (potensiHandball) { 
                         lastAITrigger = now; 
+                        bicaraAI("Peringatan, Handball!"); // Voice AI
                         simpanKlipOtomatis("✋ AI REVIEW: POTENSI HANDBALL", true, currentFrameIndex); 
                     } else if (potensiPelanggaran) { 
                         lastAITrigger = now; 
-                        simpanKlipOtomatis("🛑 AI REVIEW: FOUL / KONTAK FISIK", true, currentFrameIndex); 
+                        bicaraAI("Peringatan, Kontak Fisik!"); // Voice AI
+                        simpanKlipOtomatis("🛑 AI REVIEW: KONTAK FISIK", true, currentFrameIndex); 
                     }
                 }
 
